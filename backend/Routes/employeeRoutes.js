@@ -27,6 +27,12 @@ module.exports = function (io) {
       const room = `ann${req.user.ownerId}`;
       socket.join(room);
       console.log("joined room", room);
+
+      // Handle socket disconnection
+      socket.on("disconnect", () => {
+        console.log("Socket disconnected");
+        socket.leave(room); // Leave the room when disconnected
+      });
     });
     next(); // Call the next middleware in the chain
   });

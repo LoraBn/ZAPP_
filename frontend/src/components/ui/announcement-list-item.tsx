@@ -19,12 +19,12 @@ const AnnouncementListItem = ({item}: AnnouncementListItemProps) => {
       style={styles.container}
       onPress={() => setIsVisible(prevIsVisible => !prevIsVisible)}>
       <View style={[styles.titleContainer, bottomWidth]}>
-        <Text style={[styles.text, styles.bold]}>{item.title}</Text>
-        <Text style={styles.text}>{formatDate(item.date)}</Text>
+        <Text style={[styles.text, styles.bold]}>{item.announcement_title}</Text>
+        <Text style={styles.text}>{formatDate(item.announcement_date)}</Text>
       </View>
       {isVisible && (
         <View>
-          <Text style={styles.text}>{item.description}</Text>
+          <Text style={styles.text}>{item.announcement_message}</Text>
         </View>
       )}
     </Pressable>

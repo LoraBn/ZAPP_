@@ -9,6 +9,7 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {AuthStackParams} from '../navigation/auth-stack-navigation';
 import {useUser} from '../storage/use-user';
 import dayjs from 'dayjs';
+import client from '../API/client';
 
 type SigninForm = {
   username: string;
@@ -26,28 +27,19 @@ const Signin = ({navigation}: SigninProps) => {
     defaultValues: {password: '', username: ''},
   });
 
-  function onSubmit({password, username}: SigninForm) {
+  async function onSubmit({password, username}: SigninForm) {
     // HERE API CALLS
     console.log(password, username);
+    const responce = await client.post('/signin', {userName:username, password: password});
 
     // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
-    if (password && username) {
-      setAccessToken('MockToken');
+    if (responce) {
+      setAccessToken(responce.data.token);
       setRefreshToken('MockTokenRefresh');
       setExpiresAtToken(dayjs(new Date()).unix());
+      setType(responce.data.userType);
 
-      // Just to change type here, user should have a role/type from the db
-      switch (username) {
-        case 'owner':
-          setType('owner');
-          break;
-        case 'employee':
-          setType('employee');
-          break;
-        default:
-          setType('customer');
-          break;
-      }
+      console.log(responce.data.userType)
     }
   }
 

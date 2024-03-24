@@ -1,5 +1,5 @@
 import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {Colors} from '../utils/colors';
 import ListTextHeader from '../components/ui/list-text-header';
 import {StackScreenProps} from '@react-navigation/stack';
@@ -8,81 +8,17 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import AnnouncementListItem from '../components/ui/announcement-list-item';
 import ListSeperator from '../components/ui/list-seperator';
 import {useUser} from '../storage/use-user';
+import client from '../API/client';
+import { io } from 'socket.io-client';
 
 export type Announcement = {
   id: number;
-  title: string;
-  description: string;
-  attachments: string[];
-  date: Date;
+  owner_id : number;
+  target_type: string;
+  announcement_title: string;
+  announcement_message: string;
+  announcement_date: Date;
 };
-
-export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'axdaxd',
-    id: 1,
-    title: 'Samira',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description:
-      'asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd asdasdasd',
-    id: 2,
-    title: 'jamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 3,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 4,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 5,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 6,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 7,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 8,
-    title: 'kamal',
-  },
-  {
-    attachments: ['samiraaa'],
-    date: new Date(),
-    description: 'misadasd',
-    id: 9,
-    title: 'kamal',
-  },
-];
 
 type AnnouncementsProps = StackScreenProps<
   HomeStackNavigatorParams,
@@ -91,8 +27,42 @@ type AnnouncementsProps = StackScreenProps<
 
 const Announcements = ({navigation}: AnnouncementsProps) => {
   const userType = useUser(state => state.type);
-
   const insets = useSafeAreaInsets();
+
+  const user = useUser();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [socket, setSocket] = useState<any>(null);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    establishWebSocketConnection();
+    return () => {
+        socket.disconnect();
+    };
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const accessToken = user.accessToken;
+      const response = await client.get('/employee/announcements', {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setAnnouncements(response.data.announcements);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const establishWebSocketConnection = () => {
+    const newSocket = io('http://192.168.1.5:3000');
+    setSocket(newSocket);
+    newSocket.on('newAnnouncement', (data: any) => {
+      console.log('New announcement received:', data);
+      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+    });
+  };
 
   return (
     <View style={styles.screen}>
@@ -110,7 +80,7 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
           )}
         </View>
         <FlatList
-          data={DUMMY_ANNOUNCEMENTS}
+          data={announcements.reverse()}
           ItemSeparatorComponent={ListSeperator}
           renderItem={props => <AnnouncementListItem {...props} />}
         />

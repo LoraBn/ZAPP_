@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React from 'react';
+import React, { useEffect ,useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -18,6 +18,11 @@ import ViewAll from '../components/ui/view-all';
 import {StackScreenProps} from '@react-navigation/stack';
 import Schedule from '../components/ui/schedule';
 import {EmployeeHomeStackNavigationParams} from '../navigation/employee-home-stack-navigation';
+import client from '../API/client';
+import { io } from 'socket.io-client';
+import { useUser } from '../storage/use-user';
+import AnnouncementItem from '../components/alerts/announcement-item';
+
 
 export const DUMMY_ALERTS = [
   {
@@ -43,59 +48,6 @@ export const DUMMY_ALERTS = [
   },
 ];
 
-export type Equipment = {
-  id: number;
-  name: string;
-  price: number;
-  description: string;
-  status: 'Active' | 'Inactive';
-};
-
-export const DUMMY_EQUIPMENT: Equipment[] = [
-  {
-    description: 'Descriptionets',
-    id: 1,
-    name: 'Motor 1',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 2,
-    name: 'Motor 2',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 3,
-    name: 'Motor 3',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 4,
-    name: 'Motor 4',
-    price: 200,
-    status: 'Inactive',
-  },
-  {
-    description: 'Descriptionets',
-    id: 5,
-    name: 'Motor 5',
-    price: 300,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 6,
-    name: 'Motor 6',
-    price: 100,
-    status: 'Active',
-  },
-];
-
 type EmployeeHomeScreenProps = StackScreenProps<
   EmployeeHomeStackNavigationParams,
   'HomeScreen'
@@ -103,6 +55,42 @@ type EmployeeHomeScreenProps = StackScreenProps<
 
 const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   const insets = useSafeAreaInsets();
+  const user = useUser();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [socket, setSocket] = useState<any>(null);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    establishWebSocketConnection();
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const accessToken = user.accessToken
+      const response = await client.get('/employee/announcements', {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setAnnouncements(response.data.announcements);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const establishWebSocketConnection = () => {
+    const newSocket = io('http://192.168.1.5:3000');
+    setSocket(newSocket);
+    newSocket.on('newAnnouncement', (data: any) => {
+      console.log('New announcement received:', data);
+      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+    });
+  };
 
   return (
     <ScrollView
@@ -135,9 +123,9 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={announcements.reverse().slice(0,3)}
               scrollEnabled={false}
-              renderItem={AlertItem}
+              renderItem={AnnouncementItem}
               ListFooterComponent={() =>
                 ViewAll({onPress: () => navigation.navigate('Announcements')})
               }
