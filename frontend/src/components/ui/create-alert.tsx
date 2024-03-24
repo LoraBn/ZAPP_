@@ -1,0 +1,82 @@
+import {StyleSheet, Text, View} from 'react-native';
+import React from 'react';
+import {Colors} from '../../utils/colors';
+import DropdownInput from './dropdown-input';
+import {useForm} from 'react-hook-form';
+import ElevatedCard from './elevated-card';
+import TextInput from './text-input';
+
+type CreateAlertForm = {
+  alertType: 'Maintenance' | 'Outage' | 'Customer Fix' | 'Other';
+  alertMessage: string;
+};
+
+type CreateAlertProps = {
+  onSuccess?: () => void;
+};
+
+const CreateAlert = ({onSuccess}: CreateAlertProps) => {
+  const {control, reset, handleSubmit} = useForm<CreateAlertForm>({
+    defaultValues: {alertMessage: '', alertType: 'Maintenance'},
+  });
+
+  function onSubmit(data: CreateAlertForm) {
+    // HERE
+    console.log(data);
+    //HERE
+
+    if (onSuccess) {
+      onSuccess();
+      reset();
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.text}>Alert Type: </Text>
+        <DropdownInput
+          items={['Maintenance', 'Outage', 'Customer Fix', 'Other']}
+          control={control}
+          name="alertType"
+          placeholder="Alert Type"
+          backgroundColor={Colors.White}
+          textColor={Colors.Black}
+        />
+      </View>
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.text}>Alert Message: </Text>
+        <TextInput
+          control={control}
+          name="alertMessage"
+          placeholder="Alert message"
+          backgroundColor={Colors.White}
+          textColor={Colors.Black}
+          style={styles.textInput}
+        />
+      </View>
+      <ElevatedCard
+        onPress={handleSubmit(onSubmit)}
+        textStyle={styles.sendText}
+        style={styles.sendContainer}>
+        Send
+      </ElevatedCard>
+    </View>
+  );
+};
+
+export default CreateAlert;
+
+const styles = StyleSheet.create({
+  sendText: {color: Colors.White, fontSize: 22, fontWeight: '700'},
+  sendContainer: {alignSelf: 'center'},
+  textInput: {minHeight: 120},
+  text: {color: Colors.Black},
+  container: {
+    backgroundColor: Colors.Gray,
+    borderRadius: 25,
+    padding: 15,
+    gap: 32,
+  },
+  dropdownContainer: {flexDirection: 'row', gap: 5, alignItems: 'center'},
+});

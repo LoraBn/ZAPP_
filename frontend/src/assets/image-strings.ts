@@ -1,0 +1,16 @@
+export enum ImageStrings {
+  Zapp = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/a5f15932-937a-44a2-a13b-4cbeb3b2798b.png',
+  Network = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/7adfb0a8-a249-4df5-9db0-1bfe0aade7a8.png',
+  Profile = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/4772ec1e-0fe7-4ff5-8ea9-dbaaf975acb7.png',
+  Bill = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/5d233ad2-7d03-4b5e-96ba-d6c8ccd98f28.png',
+  Calendar = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/1411adac-5066-402d-98ec-ac8cd1476057.png',
+  Alert = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/36d640ea-7ce0-489c-a238-72fd48e0a886.png',
+  SearchIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/5e7e4700-e4b6-4675-a669-f38e99ed904f.png',
+  EditIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/75a620f5-6c18-4df2-8275-8d755f38ee0f.png',
+  TrashIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/363f2c27-85b1-4453-9bce-d805daeaef8e.png',
+  SaveIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/0ee63a80-5722-4947-a40d-8a5542ec57b2.png',
+  ProfileIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/8128aa61-2d57-4a03-ac2f-c69252f63860.png',
+  AuthLogo = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/12b47521-fa77-4fd4-86a6-b393408d4954.png',
+  ZappLogo = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/abac7fa3-7891-4164-bc9f-0175d6238011.png',
+  AlertIcon = 'https://bullix-testing-bucket.s3.eu-north-1.amazonaws.com/bd3c9593-a5ea-4e5e-a2f1-98c870e28eed.png',
+}
