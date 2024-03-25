@@ -29,39 +29,39 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
   const userType = useUser(state => state.type);
   const insets = useSafeAreaInsets();
 
-  const user = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [socket, setSocket] = useState<any>(null);
+  const {socket, setSocket, type, accessToken,} = useUser(state => state)
 
   useEffect(() => {
     fetchAnnouncements();
     establishWebSocketConnection();
-    return () => {
-        socket.disconnect();
-    };
   }, []);
 
   const fetchAnnouncements = async () => {
     try {
-      const accessToken = user.accessToken;
-      const response = await client.get('/employee/announcements', {
+      // const accessToken = user.accessToken;
+      const response = await client.get(`/${type}/announcements`, {
         headers: {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setAnnouncements(response.data.announcements);
+      setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       console.error('Error fetching announcements:', error);
     }
   };
 
   const establishWebSocketConnection = () => {
-    const newSocket = io('http://192.168.1.5:3000');
-    setSocket(newSocket);
-    newSocket.on('newAnnouncement', (data: any) => {
-      console.log('New announcement received:', data);
-      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
-    });
+    if (!socket){
+      const newSocket = io('http://192.168.1.7:3000');
+      setSocket(newSocket)
+    }
+    if (socket){
+      socket.on('newAnnouncement', (data: any) => {
+        console.log('New announcement received:', data);
+        setAnnouncements((prevAnnouncements) => [data,...prevAnnouncements]);
+      });
+    }
   };
 
   return (
@@ -80,7 +80,7 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
           )}
         </View>
         <FlatList
-          data={announcements.reverse()}
+          data={announcements}
           ItemSeparatorComponent={ListSeperator}
           renderItem={props => <AnnouncementListItem {...props} />}
         />

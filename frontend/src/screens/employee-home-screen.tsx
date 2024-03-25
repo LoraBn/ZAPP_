@@ -55,15 +55,17 @@ type EmployeeHomeScreenProps = StackScreenProps<
 
 const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   const insets = useSafeAreaInsets();
-  const user = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [socket, setSocket] = useState<any>(null);
+  // const [socket, setSocket] = useState<any>(null);
+   const {setSocket, socket, accessToken} = useUser(
+    state => state,
+  );
 
   useEffect(() => {
     fetchAnnouncements();
     establishWebSocketConnection();
     return () => {
-      if (socket) {
+      if (socket != null) {
         socket.disconnect();
       }
     };
@@ -71,21 +73,20 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
 
   const fetchAnnouncements = async () => {
     try {
-      const accessToken = user.accessToken
       const response = await client.get('/employee/announcements', {
         headers: {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setAnnouncements(response.data.announcements);
+      setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       console.error('Error fetching announcements:', error);
     }
   };
 
   const establishWebSocketConnection = () => {
-    const newSocket = io('http://192.168.1.5:3000');
-    setSocket(newSocket);
+    const newSocket = io('http://192.168.1.7:3000');
+    setSocket(newSocket)
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
       setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
@@ -123,7 +124,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={announcements.reverse().slice(0,3)}
+              data={announcements.slice(0,3)}
               scrollEnabled={false}
               renderItem={AnnouncementItem}
               ListFooterComponent={() =>

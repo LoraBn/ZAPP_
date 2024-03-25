@@ -648,12 +648,25 @@ const createAnnouncement = async (req, res) => {
       announcement_message,
     ]);
 
-    const room = `ann${req.user.userId}`;
+    let room;
     const announcementId = result.rows[0].announcement_id;
+    switch(target_type){
+      case "BOTH":
+        room = `all${req.user.userId}`;
+        break;
+      case "EMPLOYEE":
+        room = `emp${req.user.userId}`;
+        break;
+      case "CUSTOMER":
+        room = `cust${req.user.userId}`;
+        break;
+    }
+      
     req.app
       .get("io")
       .to(room)
       .emit("newAnnouncement", { announcement_title, announcement_message });
+    console.log("annoncement sent to room", room)
     res.status(201).json({
       message: "Announcement created",
       announcementTitle: announcement_title,

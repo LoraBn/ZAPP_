@@ -60,14 +60,27 @@ const router = Router();
 
 module.exports = function (io) {
 
-  // router.use(authenticateOwnerToken, (req, res, next) => {
-    
-  //   io.on("connection", (socket) => {
-  //     socket.join(`ann${req.user.userId}`);
-  //     console.log('joined room');
-  //   });
-  //   next(); 
-  // });
+  router.use(authenticateOwnerToken, (req, res, next) => {
+    // Join the room when the request is authenticated
+    io.on("connection", (socket) => {
+      const room1 = `all${req.user.userId}`;
+      socket.join(room1);
+      const room2 = `emp${req.user.userId}`;
+      socket.join(room2);
+      const room3 = `cust${req.user.userId}`;
+      socket.join(room3);
+      console.log("joined room", room1,room2, room3);
+
+      // Handle socket disconnection
+      socket.on("disconnect", () => {
+        console.log("Socket disconnected");
+        socket.leave(room1); // Leave the room when disconnected
+        socket.leave(room2); // Leave the room when disconnected
+        socket.leave(room3); // Leave the room when disconnected
+      });
+    });
+    next(); // Call the next middleware in the chain
+  });
 
   router.post("/signup", ownerSignUp);
   router.put("/profile", authenticateOwnerToken, ownerUpdate);

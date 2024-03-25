@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -19,6 +19,10 @@ import ViewAll from '../components/ui/view-all';
 import {StackScreenProps} from '@react-navigation/stack';
 import {HomeStackNavigatorParams} from '../navigation/home-stack-navigation';
 import EquipmentItem from '../components/ui/equipment-item';
+import client from '../API/client';
+import { io } from 'socket.io-client';
+import AnnouncementItem from '../components/alerts/announcement-item';
+import { useUser } from '../storage/use-user';
 
 export const DUMMY_ALERTS = [
   {
@@ -115,6 +119,45 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     {value: 2, label: 'D', frontColor: '#bf3d3d'},
     {value: 5, label: 'E', frontColor: '#9272b1'},
   ];
+
+//Announcements
+const [announcements, setAnnouncements] = useState<any[]>([]);
+  // const [socket, setSocket] = useState<any>(null);
+   const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
+
+  useEffect(() => {
+    fetchAnnouncements();
+    establishWebSocketConnection();
+    return () => {
+      if (socket != null) {
+        socket.disconnect();
+      }
+    };
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await client.get(`/${type}/announcements`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setAnnouncements(response.data.announcements.reverse());
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const establishWebSocketConnection = () => {
+    const newSocket = io('http://192.168.1.7:3000');
+    setSocket(newSocket)
+    newSocket.on('newAnnouncement', (data: any) => {
+      console.log('New announcement received:', data);
+      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+    });
+  };
 
   return (
     <ScrollView
@@ -224,9 +267,9 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={announcements.slice(0,3)}
               scrollEnabled={false}
-              renderItem={AlertItem}
+              renderItem={AnnouncementItem}
               ListFooterComponent={() =>
                 ViewAll({onPress: () => navigation.navigate('Announcements')})
               }

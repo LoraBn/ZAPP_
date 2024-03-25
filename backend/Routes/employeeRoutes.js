@@ -24,14 +24,17 @@ module.exports = function (io) {
   router.use(authenticateEmployeeToken, (req, res, next) => {
     // Join the room when the request is authenticated
     io.on("connection", (socket) => {
-      const room = `ann${req.user.ownerId}`;
-      socket.join(room);
-      console.log("joined room", room);
+      const room1 = `all${req.user.ownerId}`;
+      socket.join(room1);
+      const room2 = `emp${req.user.ownerId}`;
+      socket.join(room2);
+      console.log("joined room", room1,room2);
 
       // Handle socket disconnection
       socket.on("disconnect", () => {
         console.log("Socket disconnected");
-        socket.leave(room); // Leave the room when disconnected
+        socket.leave(room1); // Leave the room when disconnected
+        socket.leave(room2); // Leave the room when disconnected
       });
     });
     next(); // Call the next middleware in the chain

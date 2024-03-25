@@ -9,13 +9,14 @@ import {DocumentPickerResponse} from 'react-native-document-picker';
 import {StackScreenProps} from '@react-navigation/stack';
 import {HomeStackNavigatorParams} from '../navigation/home-stack-navigation';
 import DropdownInput from '../components/ui/dropdown-input';
+import client from '../API/client';
+import { useUser } from '../storage/use-user';
 
 type AddAnnouncementsForm = {
   title: string;
   description: string;
-  attachments: DocumentPickerResponse[];
   date: Date | null;
-  target: 'All' | 'Customers' | 'Employees';
+  target: 'BOTH' | 'CUSTOMER' | 'EMPLOYEE';
 };
 
 type AddAnnouncementsProps = StackScreenProps<
@@ -28,24 +29,51 @@ const AddAnnouncements = ({navigation}: AddAnnouncementsProps) => {
     defaultValues: {
       description: '',
       title: '',
-      target: 'All',
+      target: 'BOTH',
     },
   });
 
-  function onSubmit({
-    attachments,
+  const {socket, setSocket, type, accessToken,} = useUser(state => state)
+
+  async function onSubmit({
+    target,
     date,
     description,
     title,
   }: AddAnnouncementsForm) {
-    // SUBMIT HERE
-
-    console.log(attachments, date, description, title);
-
     Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
-      {text: 'Cancel'},
-      {text: 'Save', onPress: () => navigation.goBack()},
+      {
+        text: 'Cancel',
+      },
+      {
+        text: 'Save',
+        onPress: async () => {
+          try {
+            const response = await client.post(`/${type}/announcements`, {
+              target_type: target,
+              announcement_title: title,
+              announcement_message: description,
+            }, {
+              headers: {
+                authorization: `Bearer ${accessToken}`,
+              },
+            });
+  
+            console.log(response.data);
+  
+            Alert.alert('Success', 'The announcement has been successfully added.');
+  
+            navigation.goBack();
+  
+          } catch (error) {
+            console.log(error);
+            Alert.alert('Error', 'An error occurred while submitting the data.');
+          }
+        },
+      },
     ]);
+  
+    console.log(description, title);
   }
 
   return (
@@ -67,7 +95,7 @@ const AddAnnouncements = ({navigation}: AddAnnouncementsProps) => {
           name="target"
           placeholder="Target"
           textColor={Colors.Black}
-          items={['All', 'Customers', 'Employees']}
+          items={['BOTH', 'CUSTOMER', 'EMPLOYEE']}
         />
       </View>
       <View style={styles.inputContainer}>
