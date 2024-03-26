@@ -758,10 +758,12 @@ const createPlan = async (req, res) => {
 
     // Emit notification to relevant room
     let room = `emp${ownerId}`;
-    req.app
-      .get("io")
-      .to(room)
-      .emit("newPlan", { plan_name, plan_price, date: newPlan.rows[0].date });
+    req.app.get("io").to(room).emit("newPlan", {
+      plan_id: newPlan.rows[0].plan_id,
+      plan_name,
+      plan_price,
+      date: newPlan.rows[0].date, // Assuming date is returned by the query
+    });
     console.log("announcement sent to room", room);
 
     // Send response
@@ -1285,7 +1287,7 @@ const createExpense = async (req, res) => {
     if (insertResult.rows.length > 0) {
       let room = `emp${ownerId}`;
       req.app.get("io").to(room).emit("newExpense", {
-        expense_id:insertResult.rows[0].expense_id,
+        expense_id: insertResult.rows[0].expense_id,
         username,
         description,
         amount,
@@ -1395,7 +1397,6 @@ const updateExpense = async (req, res) => {
   }
 };
 
-
 const deleteExpense = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -1424,8 +1425,11 @@ const deleteExpense = async (req, res) => {
     const deleteResult = await pool.query(deleteQuery);
 
     if (deleteResult.rowCount > 0) {
-      let room = `emp${ownerId}`
-      req.app.get('io').to(room).emit("deleteExpense", {deletedId : expenseId})
+      let room = `emp${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("deleteExpense", { deletedId: expenseId });
       res.status(202).json({ message: "Expense deleted successfully" });
     } else {
       res.status(500).json({ error_message: "Failed to delete expense" });

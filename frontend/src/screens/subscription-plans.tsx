@@ -70,7 +70,7 @@ const SubscriptionPlans = ({}: SubscriptionPlansProps) => {
         })
       });
       socket.on('deletePlan', (data:any)=> {
-        const {plan_id} = data; 
+        const {plan_id} = data;
         setPlans((prevPlans)=>{
           return prevPlans.filter((item)=> item.plan_id !== plan_id)
         })
