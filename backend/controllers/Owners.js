@@ -733,9 +733,20 @@ const createPrice = async (req, res) => {
     const { kwh_price } = req.body;
     const ownerId = req.user.userId;
 
+    // Check if a price already exists for the owner
+    const existingPriceQuery =
+      "SELECT COUNT(*) FROM kwh_prices WHERE owner_id = $1";
+    const existingPrice = await pool.query(existingPriceQuery, [ownerId]);
+
+    if (existingPrice.rows[0].count > 0) {
+      return res.status(400).json({
+        error_message: "Price already exists for this owner",
+      });
+    }
+
     // Insert new price
     const insertPriceQuery =
-      "INSERT INTO kwh_prices (kwh_price, owner_id) VALUES ($1, $2) RETURNING price_id";
+      "INSERT INTO kwh_prices (kwh_price, owner_id) VALUES ($1, $2) RETURNING price_id, date";
     const newPrice = await pool.query(insertPriceQuery, [kwh_price, ownerId]);
 
     // Emit notification to relevant room
@@ -1003,31 +1014,15 @@ const getElectricSchedule = async (req, res) => {
 const createElectricSchedule = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const { equipment_id, daily_schedule } = req.body;
-
-    // Check if the equipment exists and is owned by the provided owner
-    const isEquipment = await pool.query(
-      "SELECT * FROM equipments WHERE owner_id =$1 AND equipment_id = $2",
-      [ownerId, equipment_id]
-    );
-
-    if (isEquipment.rows.length === 0) {
-      return res.status(402).json({
-        error_message: "Equipment doesn't exist or is not owned by the owner",
-      });
-    }
+    const { daily_schedule } = req.body;
 
     // Proceed with creating electric schedule
     const queryText = `
-      INSERT INTO electric_schedules(owner_id, equipment_id, daily_schedule)
-      VALUES($1, $2, ARRAY[$3]::time_range[])
+      INSERT INTO electric_schedules(owner_id, schedule)
+      VALUES($1, $2)
       RETURNING schedule_id`;
 
-    const result = await pool.query(queryText, [
-      ownerId,
-      equipment_id,
-      daily_schedule,
-    ]);
+    const result = await pool.query(queryText, [ownerId, daily_schedule]);
 
     if (result.rows.length > 0) {
       res.status(201).json({
@@ -1049,7 +1044,7 @@ const updateElectricSchedule = async (req, res) => {
   try {
     const ownerId = req.user.userId;
     const scheduleId = req.params.id;
-    const { equipment_id, daily_schedule } = req.body;
+    const { daily_schedule } = req.body;
 
     // Check if the electric schedule exists and is owned by the provided owner
     const scheduleExistsQuery =
@@ -1069,7 +1064,6 @@ const updateElectricSchedule = async (req, res) => {
 
     // Determine the values to update
     const updatedValues = {
-      equipment_id: equipment_id || existingSchedule.equipment_id,
       daily_schedule: daily_schedule || existingSchedule.daily_schedule,
     };
 
@@ -1077,15 +1071,10 @@ const updateElectricSchedule = async (req, res) => {
     const updateQuery = {
       text: `
         UPDATE electric_schedules
-        SET equipment_id = $1, daily_schedule = $2
-        WHERE schedule_id = $3 AND owner_id = $4
+        SET daily_schedule = $1
+        WHERE schedule_id = $2 AND owner_id = $3
         RETURNING schedule_id`,
-      values: [
-        updatedValues.equipment_id,
-        updatedValues.daily_schedule,
-        scheduleId,
-        ownerId,
-      ],
+      values: [updatedValues.daily_schedule, scheduleId, ownerId],
     };
 
     const updateResult = await pool.query(updateQuery);

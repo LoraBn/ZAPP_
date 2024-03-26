@@ -65,9 +65,9 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 
 - **Get eletric schedule** GET: /api/owner/electric-schedule => {schedule} : {error_message}
 
-- **Create electric schedule** POST: /api/owner/electric-schedule {equipment_id, daily_schedule:[('04:00', '08:30'), ('09:00', '12:00'), ('05:00', '09:30')]} => {schedule_id, message} : {error_message}
+- **Create electric schedule** POST: /api/owner/electric-schedule {daily_schedule:[('04:00', '08:30'), ('09:00', '12:00'), ('05:00', '09:30')]} => {schedule_id, message} : {error_message}
 
-- **Update electric schedule** PUT: /api/owner/electric-schedule/:id {equipment_id, daily_schedule} => {schedule_id, message}: {error_message}
+- **Update electric schedule** PUT: /api/owner/electric-schedule/:id {daily_schedule} => {schedule_id, message}: {error_message}
 
 - **Delete electric schedule** DELETE: /api/owner/electric-schedule/:id => {message} : {error_message}
 

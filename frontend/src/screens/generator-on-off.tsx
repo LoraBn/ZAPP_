@@ -13,12 +13,11 @@ import DropdownInput from '../components/ui/dropdown-input';
 export type GeneratorForm = {
   timings: {id: string; time_to_turn_on: Date; time_to_turn_off: Date}[];
   kw_price: string;
-  equipment: string | null;
 };
 
 const GeneratorOnOff = () => {
   const {control, handleSubmit} = useForm<GeneratorForm>({
-    defaultValues: {kw_price: '', timings: [], equipment: null},
+    defaultValues: {kw_price: '', timings: []},
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -51,7 +50,7 @@ const GeneratorOnOff = () => {
                 keyboardType="decimal-pad"
               />
             </View>
-            <View style={styles.inputContainer}>
+            {/* <View style={styles.inputContainer}>
               <Text style={styles.label}>Equipment:</Text>
               <DropdownInput
                 control={control}
@@ -61,7 +60,7 @@ const GeneratorOnOff = () => {
                 items={['Motor 1', 'Motor 2', 'Motor 3']}
                 disabled={!isEditing}
               />
-            </View>
+            </View> */}
             <ScreenHeader>Timing on/off</ScreenHeader>
             {isEditing && (
               <ElevatedCard
