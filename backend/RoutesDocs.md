@@ -71,6 +71,15 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 
 - **Delete electric schedule** DELETE: /api/owner/electric-schedule/:id => {message} : {error_message}
 
+### Kwh_price
+- **Get kwh price** GET: /api/owner/price => {price} : {error_message}
+
+- **Set kwh price** POST: /api/owner/price {kwh_price} => {price_id, message}: {error_message}  
+
+- **update kwh price** POST: /api/owner/price/:id {kwh_price} => {message}: {error_message}  
+
+- **Delete kw price** DELETE: /api/owner/price/:id => {message}: {error_message}
+
 ### Bills
 
 - **Get all bills** GET: /api/owner/bills => {bills} : {error_message}
@@ -113,7 +122,7 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 
 - **Close Support Ticket** PUT: /api/owner/ticket/:id/close => { ticket_id, message } : { error_message }
 
-## Support Ticket Replies
+### Support Ticket Replies
 
 - **Get Ticket Replies** GET: /api/owner/ticket/:id/reply => { replies_list } : { error_message }
 
@@ -168,6 +177,9 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 - **Update Bill** PUT: /api/employee/bills/:id {ustomerUsername, previous_meter, current_meter, total_kwh, total_amount, billing_status, remaining_amount} => {bill_id, message} : {error_message}
 
 - **Delete Bill** DELETE: /api/employee/bills/:id => {message} : {error_message}
+
+### Kwh_price
+- **Get kwh price** GET: /api/owner/price => {price} : {error_message}
 
 ### Alert Ticketing system:
 
