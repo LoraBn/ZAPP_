@@ -733,13 +733,28 @@ const createPlan = async (req, res) => {
   try {
     const { plan_name, plan_price } = req.body;
     const ownerId = req.user.userId;
-    const queryText =
-      "INSERT INTO plans_prices (plan_name, plan_price, owner_id) VALUES ($1, $2, $3) RETURNING plan_id";
-    const newPlan = await pool.query(queryText, [
-      plan_name,
-      plan_price,
-      ownerId,
-    ]);
+
+    // Check if the plan name already exists
+    const checkExistingPlanQuery = "SELECT COUNT(*) FROM plans_prices WHERE plan_name = $1 AND owner_id = $2";
+    const existingPlan = await pool.query(checkExistingPlanQuery, [plan_name, ownerId]);
+
+    if (existingPlan.rows[0].count > 0) {
+      return res.status(400).json({ error_message: "Plan name already exists." });
+    }
+
+    // Insert the new plan if the plan name is unique
+    const insertPlanQuery = "INSERT INTO plans_prices (plan_name, plan_price, owner_id) VALUES ($1, $2, $3) RETURNING plan_id";
+    const newPlan = await pool.query(insertPlanQuery, [plan_name, plan_price, ownerId]);
+
+    // Emit notification to relevant room
+    let room = `emp${ownerId}`;
+    req.app
+      .get("io")
+      .to(room)
+      .emit("newPlan", { plan_name, plan_price, date: newPlan.rows[0].date });
+    console.log("announcement sent to room", room);
+
+    // Send response
     res.status(201).json({
       plan_id: newPlan.rows[0].plan_id,
       message: "Plan created successfully!",
@@ -750,10 +765,11 @@ const createPlan = async (req, res) => {
   }
 };
 
+
 const updatePlan = async (req, res) => {
   try {
     const planId = req.params.id;
-    const { plan_name, plan_price } = req.body;
+    const { plan_price } = req.body;
     const ownerId = req.user.userId;
 
     // Check if the plan exists
@@ -772,22 +788,15 @@ const updatePlan = async (req, res) => {
 
     const existingPlan = planExistsResult.rows[0];
 
-    // Determine the values to update
-    const updatedValues = {
-      plan_name: plan_name || existingPlan.plan_name,
-      plan_price: plan_price || existingPlan.plan_price,
-    };
-
     // Update the plan
     const updateQuery = {
       text: `
         UPDATE plans_prices
-        SET plan_name = $1, plan_price = $2
-        WHERE plan_id = $3 AND owner_id = $4
-        RETURNING plan_id`,
+        SET plan_price = $1
+        WHERE plan_id = $2 AND owner_id = $3
+        RETURNING date`,
       values: [
-        updatedValues.plan_name,
-        updatedValues.plan_price,
+        plan_price,
         planId,
         ownerId,
       ],
@@ -796,8 +805,14 @@ const updatePlan = async (req, res) => {
     const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
+      console.log("im here")
+      let room = `emp${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("updatePlan", { plan_id: planId, plan_name: existingPlan.plan_name, plan_price, date: updateResult.rows[0].date });
       res.status(200).json({
-        plan_id: updateResult.rows[0].plan_id,
+        plan_id: planId,
         message: "Plan updated successfully!",
       });
     } else {
@@ -810,6 +825,7 @@ const updatePlan = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const deletePlan = async (req, res) => {
   try {
@@ -824,6 +840,11 @@ const deletePlan = async (req, res) => {
     const deleteResult = await pool.query(deleteQuery);
 
     if (deleteResult.rowCount > 0) {
+      let room = `emp${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("deletePlan", { plan_id: planId});
       res.status(202).json({ message: "Plan deleted successfully" });
     } else {
       res

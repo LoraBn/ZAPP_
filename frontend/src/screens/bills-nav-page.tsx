@@ -1,5 +1,5 @@
-import {FlatList, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import {Alert, FlatList, ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, { useEffect, useState } from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -8,12 +8,15 @@ import ViewAll from '../components/ui/view-all';
 import {StackScreenProps} from '@react-navigation/stack';
 import EquipmentItem from '../components/ui/equipment-item';
 import {BillingStackNavigatorParams} from '../navigation/billing-stack-navigation';
-import {DUMMY_EQUIPMENT} from './owner-home-page';
 import SubscriptionPlanItem from '../components/ui/subscription-plan-item';
 import ExpensesItem from '../components/ui/expenses-item';
 import {User} from './users-dashboard';
 import {DUMMY_USERS} from './billing-management';
 import BillsItem from '../components/ui/bills-item';
+import client from '../API/client';
+import { useUser } from '../storage/use-user';
+import { ioString } from '../API/io';
+import { io } from 'socket.io-client';
 
 type BillsNavPageProps = StackScreenProps<
   BillingStackNavigatorParams,
@@ -21,9 +24,9 @@ type BillsNavPageProps = StackScreenProps<
 >;
 
 export type Plan = {
-  id: number;
-  plan: string;
-  price: number;
+  plan_id: number;
+  plan_name: string;
+  plan_price: number;
   date: Date;
 };
 
@@ -44,13 +47,6 @@ export type Bill = {
 };
 
 export const NAMES = ['Simon', 'Jeoffrey', 'Barratheon', 'Linda', 'Stark'];
-
-export const DUMMY_PLANS: Plan[] = [
-  {id: 1, plan: '10Amp', price: 200, date: new Date()},
-  {id: 2, plan: '5Amp', price: 100, date: new Date()},
-  {id: 3, plan: '2Amp', price: 50, date: new Date()},
-  {id: 4, plan: '1Amp', price: 25, date: new Date()},
-];
 
 export const DUMMY_EXPENSES: Expense[] = [
   {
@@ -114,6 +110,91 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
 
   const isPaid = false;
 
+  const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
+
+  const [plans, setPlans] = useState<any[]>([]);
+  const fetchPlans = async ()=> {
+    try {
+      const responce = await client(`/${type}/plans`, {
+        headers: {
+          authorization : `Bearer ${accessToken}` ,
+        }
+      });
+      setPlans(responce.data.plans.reverse());
+      
+    } catch (error:any) {
+      Alert.alert(error.message);
+      console.log(error);
+    }
+  }
+
+  const [equipments, setEquipments] = useState<any[]>([]);
+const fetchEquipments = async () => {
+  try {
+    const response = await client.get(`/${type}/equipments`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`, // Replace with your actual token
+      },
+    });
+    setEquipments(response.data.equipments.reverse());
+  } catch (error) {
+    console.error('Error fetching announcements:', error);
+  }
+}
+
+useEffect(() => {
+  fetchEquipments();
+  fetchPlans(),
+  establishWebSocketConnection();
+}, []);
+
+const establishWebSocketConnection = ()=>{
+  if(!socket){
+    const newSocket = io(ioString);
+    setSocket(newSocket)
+    console.log('creating new socket')
+  }
+  if(socket){
+    socket.on('newEquipment', (data: any)=> {
+      console.log("New equipmenet added:",data);
+      setEquipments((prevEquipments) => [data, ...prevEquipments])
+    });
+
+    //equipments
+    socket.on('updateEquipment', (data:any)=> {
+      console.log("Im here");
+      const {oldName,name, price, description, status} = data;
+      const newEq = {name, price, description, status};
+      setEquipments((prevEquipments)=> {
+        const filtered = prevEquipments.filter((item)=> item.name != oldName);
+        return [newEq, ...filtered]
+      })
+    });
+    socket.on('deleteEquipment', (data:any)=> {
+      const {deletedName} = data; 
+      setEquipments((prevEquipments)=>{
+        return prevEquipments.filter((item)=> item.name !== deletedName)
+      })
+    });
+    
+    //plans
+    socket.on('newPlan', (data:any)=> {
+      console.log(data)
+      setPlans((prevPlans)=> [data, ...prevPlans])
+    });
+    socket.on('updatePlan', (data:any)=> {
+      console.log("Im here");
+      const {plan_id} = data;
+      setEquipments((prevPlans)=> {
+        const filtered = prevPlans.filter((item)=> item.plan_id != plan_id );
+        return [data, ...filtered]
+      })
+    });
+  }
+}
+
   // CHANGE DATA FROM API..
   return (
     <ScrollView
@@ -147,7 +228,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_PLANS}
+              data={plans.slice(0,3)}
               scrollEnabled={false}
               renderItem={SubscriptionPlanItem}
               ListFooterComponent={() =>
@@ -170,7 +251,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_EQUIPMENT}
+              data={equipments.slice(0,3)}
               scrollEnabled={false}
               renderItem={EquipmentItem}
               ListFooterComponent={() =>

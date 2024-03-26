@@ -12,8 +12,8 @@ type SubscriptionPlanItemProps = {
 const SubscriptionPlanItem = ({item}: SubscriptionPlanItemProps) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>{item.plan}</Text>
-      <Text style={styles.alertText}>{`$ ${item.price}`}</Text>
+      <Text style={styles.userText}>{item.plan_name}</Text>
+      <Text style={styles.alertText}>{`$ ${item.plan_price}`}</Text>
       <Text style={styles.alertText}>{formatDate(item.date)}</Text>
     </View>
   );

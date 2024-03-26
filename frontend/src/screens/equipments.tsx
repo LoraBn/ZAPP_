@@ -12,6 +12,7 @@ import AddEquipmentItem from '../components/ui/add-equipment-item';
 import client from '../API/client';
 import { useUser } from '../storage/use-user';
 import { io } from 'socket.io-client';
+import { ioString } from '../API/io';
 
 type EquipmentsProps = StackScreenProps<HomeStackNavigatorParams, 'Equipments'>;
 
@@ -40,7 +41,7 @@ const Equipments = ({}: EquipmentsProps) => {
 
 const establishWebSocketConnection = ()=>{
   if(!socket){
-    const newSocket = io('http://192.168.1.7:3000');
+    const newSocket = io(ioString);
     setSocket(newSocket)
     console.log('creating new socket')
   }

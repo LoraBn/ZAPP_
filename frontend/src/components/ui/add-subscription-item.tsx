@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Alert, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import Card from './card';
@@ -6,31 +6,46 @@ import TextInput from './text-input';
 import {Colors} from '../../utils/colors';
 import ElevatedCard from './elevated-card';
 import DropdownInput from './dropdown-input';
-import {DUMMY_PLANS} from '../../screens/bills-nav-page';
+import { useUser } from '../../storage/use-user';
+import client from '../../API/client';
 
 type AddSubscriptionItemProps = {
   onSuccess?: () => void;
 };
 
 type AddSubscriptionForm = {
-  plan: string;
-  price: string;
+  plan_name: string;
+  plan_price: string;
 };
 
 const AddSubscriptionItem = ({onSuccess}: AddSubscriptionItemProps) => {
   const {control, handleSubmit} = useForm<AddSubscriptionForm>({
     defaultValues: {
-      plan: DUMMY_PLANS[0].plan,
-      price: '',
+      plan_name: '',
+      plan_price: '',
     },
   });
 
-  function onSubmit(data: AddSubscriptionForm) {
+  const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
+
+  async function onSubmit(data: AddSubscriptionForm) {
     // HERE
     console.log(data);
     // SUCCESS IF U DONT USE REACT QUERY/RTK
     if (onSuccess) {
       onSuccess();
+      try {
+        const responce = await client.post(`/${type}/plans`, data, {
+          headers: {authorization: `Bearer ${accessToken}`},
+        })
+        console.log(responce.data.message);
+        Alert.alert(responce.data.message)
+      } catch (error:any) {
+        console.log(error)
+        Alert.alert(error.message)
+      }
     }
   }
 
@@ -39,20 +54,19 @@ const AddSubscriptionItem = ({onSuccess}: AddSubscriptionItemProps) => {
       <View style={styles.container}>
         <View style={styles.textInputContainer}>
           <Text style={styles.text}>Plan:</Text>
-          <DropdownInput
+          <TextInput
             control={control}
-            name="plan"
+            name="plan_name"
             placeholder="Plan"
             textColor={Colors.Black}
             backgroundColor={Colors.White}
-            items={DUMMY_PLANS.map(plan => plan.plan)}
           />
         </View>
         <View style={styles.textInputContainer}>
           <Text style={styles.text}>Price:</Text>
           <TextInput
             control={control}
-            name="price"
+            name="plan_price"
             placeholder="Price"
             textColor={Colors.Black}
             backgroundColor={Colors.White}

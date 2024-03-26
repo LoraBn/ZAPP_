@@ -10,6 +10,7 @@ import ListSeperator from '../components/ui/list-seperator';
 import {useUser} from '../storage/use-user';
 import client from '../API/client';
 import { io } from 'socket.io-client';
+import { ioString } from '../API/io';
 
 export type Announcement = {
   id: number;
@@ -39,7 +40,6 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
 
   const fetchAnnouncements = async () => {
     try {
-      // const accessToken = user.accessToken;
       const response = await client.get(`/${type}/announcements`, {
         headers: {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
@@ -53,7 +53,7 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
 
   const establishWebSocketConnection = () => {
     if (!socket){
-      const newSocket = io('http://192.168.1.7:3000');
+      const newSocket = io(ioString);
       setSocket(newSocket)
     }
     if (socket){

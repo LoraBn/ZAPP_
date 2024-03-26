@@ -23,6 +23,7 @@ import client from '../API/client';
 import { io } from 'socket.io-client';
 import AnnouncementItem from '../components/alerts/announcement-item';
 import { useUser } from '../storage/use-user';
+import { ioString } from '../API/io';
 
 export const DUMMY_ALERTS = [
   {
@@ -168,7 +169,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
   };
 
   const establishWebSocketConnection = () => {
-    const newSocket = io('http://192.168.1.7:3000');
+    const newSocket = io(ioString);
     setSocket(newSocket)
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);

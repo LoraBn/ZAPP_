@@ -6,6 +6,8 @@ import {useForm} from 'react-hook-form';
 import TextInput from './text-input';
 import {Plan} from '../../screens/bills-nav-page';
 import {formatDate} from '../../utils/date-utils';
+import { useUser } from '../../storage/use-user';
+import client from '../../API/client';
 
 type SubscriptionEditableItemProps = {
   item: Plan;
@@ -13,33 +15,63 @@ type SubscriptionEditableItemProps = {
 };
 
 type EquipmentForm = {
-  price: string;
+  plan_price: string;
 };
 
 const SubscriptionEditableItem = ({item}: SubscriptionEditableItemProps) => {
   const {control, handleSubmit} = useForm<EquipmentForm>({
     defaultValues: {
-      price: item.price ? item.price.toString() : '',
+      plan_price: item.plan_price ? item.plan_price.toString() : '',
     },
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
 
-  function onSubmit(data: EquipmentForm) {
+  async function onSubmit(data: EquipmentForm) {
     //HERE
     console.log(data);
+    try {
+      const responce = await client.put(`/${type}/plans/${encodeURIComponent(item.plan_id)}`,data, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        },
+        
+      });
+      console.log(responce.data)
+    } catch (error:any) {
+      console.log(error);
+      Alert.alert(error.message)
+    }
+    
     //SUCCESS
     setIsEditing(false);
+  }
+
+  async function deleteItem(plan_id:number){
+    try {
+      const responce = await client.delete(`/${type}/plans/${encodeURIComponent(plan_id)}`,{
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+      console.log(responce.data.message);
+      Alert.alert(responce.data.message)
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.topItemsContainer}>
-        <Text style={[styles.text, styles.semiBold]}>{item.plan}</Text>
+        <Text style={[styles.text, styles.semiBold]}>{item.plan_name}</Text>
         {isEditing ? (
           <TextInput
             control={control}
-            name="price"
+            name="plan_price"
             textColor={Colors.Black}
             backgroundColor={Colors.White}
             placeholder="Price"
@@ -47,7 +79,7 @@ const SubscriptionEditableItem = ({item}: SubscriptionEditableItemProps) => {
             keyboardType="number-pad"
           />
         ) : (
-          <Text style={styles.text}>{`$ ${item.price}`}</Text>
+          <Text style={styles.text}>{`$ ${item.plan_price}`}</Text>
         )}
         <Text style={styles.dateText}>{formatDate(item.date)}</Text>
       </View>
@@ -76,7 +108,7 @@ const SubscriptionEditableItem = ({item}: SubscriptionEditableItemProps) => {
                 {
                   text: 'Confirm',
                   onPress: () => {
-                    // HERE
+                    deleteItem(item.plan_id)
                   },
                 },
               ],
