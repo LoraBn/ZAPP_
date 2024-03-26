@@ -1,5 +1,5 @@
 import {Alert, Image, Pressable, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../../utils/colors';
 import {ImageStrings} from '../../assets/image-strings';
 import {useForm} from 'react-hook-form';
@@ -7,6 +7,8 @@ import TextInput from './text-input';
 import {Expense, NAMES} from '../../screens/bills-nav-page';
 import {formatDate} from '../../utils/date-utils';
 import DropdownInput from './dropdown-input';
+import client from '../../API/client';
+import {useUser} from '../../storage/use-user';
 
 type ExpenseEditableItemProps = {
   item: Expense;
@@ -14,7 +16,8 @@ type ExpenseEditableItemProps = {
 };
 
 export type EquipmentForm = {
-  price: string;
+  expense_id: number;
+  amount: number;
   username: string;
   description: string;
 };
@@ -22,24 +25,64 @@ export type EquipmentForm = {
 const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
   const {control, handleSubmit} = useForm<EquipmentForm>({
     defaultValues: {
-      username: NAMES[0],
+      username: "",
     },
   });
 
+  const {setSocket, socket, accessToken, type,employees} = useUser(state => state);
+
   const [isEditing, setIsEditing] = useState(false);
 
-  function onSubmit(data: EquipmentForm) {
-    //HERE
+  async function deleteItem(item:any){
+    try {
+      const responce = await client.delete(`/${type}/expenses/${encodeURIComponent(item.expense_id)}`,{
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+      console.log(responce.data.message);
+      Alert.alert(responce.data.message)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  async function onSubmit(data: EquipmentForm) {
+    // Convert amount to integer
+    data.amount = parseInt(data.amount);
+    
+    // Validate if the entered amount is a valid integer
+    if (isNaN(data.amount)) {
+      Alert.alert('Invalid Amount', 'Please enter a valid integer amount.');
+      return;
+    }
+  
+    // Continue with your existing code
     console.log(data);
+    try {
+      const responce = await client.put(
+        `/${type}/expenses/${encodeURIComponent(item.expense_id)}`,
+        data,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      console.log(responce.data.message);
+    } catch (error) {
+      console.log(error);
+    }
     //SUCCESS
     setIsEditing(false);
   }
+  
 
   return (
     <View style={styles.container}>
       {!isEditing && (
         <Text style={[styles.text, styles.semiBold]}>
-          {formatDate(item.date)}
+          {formatDate(item.expense_date)}
         </Text>
       )}
       <View style={styles.topItemsContainer}>
@@ -51,15 +94,15 @@ const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
             backgroundColor={Colors.White}
             placeholder="Username"
             style={styles.textInputStyles}
-            items={NAMES}
+            items={employees}
           />
         ) : (
-          <Text style={[styles.text, styles.semiBold]}>{item.name}</Text>
+          <Text style={[styles.text, styles.semiBold]}>{item.username}</Text>
         )}
         {isEditing ? (
           <TextInput
             control={control}
-            name="price"
+            name="amount"
             textColor={Colors.Black}
             backgroundColor={Colors.White}
             placeholder="Price"
@@ -108,6 +151,7 @@ const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
                   text: 'Confirm',
                   onPress: () => {
                     // HERE
+                    deleteItem(item)
                   },
                 },
               ],

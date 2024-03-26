@@ -140,7 +140,7 @@ const fetchEquipments = async () => {
 //Announcements
 const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
-   const {setSocket, socket, accessToken,type} = useUser(
+   const {setSocket, socket, accessToken,type,setEmployees,employees} = useUser(
     state => state,
   );
 
@@ -148,6 +148,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
     fetchAnnouncements();
     fetchEquipments();
     establishWebSocketConnection();
+    fetchEmployees()
     return () => {
       if (socket != null) {
         socket.disconnect();
@@ -165,6 +166,20 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
       setAnnouncements(response.data.announcements.reverse());
     } catch (error) {
       console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await client.get(`/${type}/employees`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      });
+      const employeesArray = response.data.employees.map((employee: any) => employee.username);
+      setEmployees(employeesArray);
+    } catch (error:any) {
+      console.log(error.message);
     }
   };
 

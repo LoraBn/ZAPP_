@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Alert, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import Card from './card';
@@ -7,6 +7,8 @@ import {Colors} from '../../utils/colors';
 import ElevatedCard from './elevated-card';
 import DropdownInput from './dropdown-input';
 import {NAMES} from '../../screens/bills-nav-page';
+import client from '../../API/client';
+import { useUser } from '../../storage/use-user';
 
 type AddExpenseItemProps = {
   onSuccess?: () => void;
@@ -14,25 +16,39 @@ type AddExpenseItemProps = {
 
 type AddSubscriptionForm = {
   username: string;
-  price: string;
+  amount: string;
   description: string;
 };
 
 const AddExpenseItem = ({onSuccess}: AddExpenseItemProps) => {
   const {control, handleSubmit} = useForm<AddSubscriptionForm>({
     defaultValues: {
-      username: NAMES[0],
+      username: "",
       description: '',
-      price: '',
+      amount: '',
     },
   });
 
-  function onSubmit(data: AddSubscriptionForm) {
+  const {accessToken,type, employees} = useUser(
+    state => state,
+  );
+
+  async function onSubmit(data: AddSubscriptionForm) {
     // HERE
     console.log(data);
     // SUCCESS IF U DONT USE REACT QUERY/RTK
     if (onSuccess) {
       onSuccess();
+      try {
+        const responce = await client.post(`/${type}/expenses`, data, {
+          headers: {authorization: `Bearer ${accessToken}`},
+        })
+        console.log(responce.data.message);
+        Alert.alert(responce.data.message)
+      } catch (error:any) {
+        console.log(error)
+        Alert.alert(error.message)
+      }
     }
   }
 
@@ -47,14 +63,14 @@ const AddExpenseItem = ({onSuccess}: AddExpenseItemProps) => {
             placeholder="Name"
             textColor={Colors.Black}
             backgroundColor={Colors.White}
-            items={NAMES}
+            items={employees}
           />
         </View>
         <View style={styles.textInputContainer}>
           <Text style={styles.text}>Amount:</Text>
           <TextInput
             control={control}
-            name="price"
+            name="amount"
             placeholder="Amount"
             textColor={Colors.Black}
             backgroundColor={Colors.White}

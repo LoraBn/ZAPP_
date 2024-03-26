@@ -11,7 +11,7 @@ type ExpensesItemProps = {
 const ExpensesItem = ({item}: ExpensesItemProps) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>{item.name}</Text>
+      <Text style={styles.userText}>{item.username}</Text>
       <Text style={styles.alertText}>{`$ ${item.amount}`}</Text>
     </View>
   );

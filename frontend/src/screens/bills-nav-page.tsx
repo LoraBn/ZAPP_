@@ -1,5 +1,12 @@
-import {Alert, FlatList, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -14,9 +21,9 @@ import {User} from './users-dashboard';
 import {DUMMY_USERS} from './billing-management';
 import BillsItem from '../components/ui/bills-item';
 import client from '../API/client';
-import { useUser } from '../storage/use-user';
-import { ioString } from '../API/io';
-import { io } from 'socket.io-client';
+import {useUser} from '../storage/use-user';
+import {ioString} from '../API/io';
+import {io} from 'socket.io-client';
 
 type BillsNavPageProps = StackScreenProps<
   BillingStackNavigatorParams,
@@ -31,11 +38,11 @@ export type Plan = {
 };
 
 export type Expense = {
-  id: number;
-  name: string;
+  expense_id: number;
+  username: string;
   amount: number;
   description: string;
-  date: Date;
+  expense_date: Date;
 };
 
 export type Bill = {
@@ -47,37 +54,6 @@ export type Bill = {
 };
 
 export const NAMES = ['Simon', 'Jeoffrey', 'Barratheon', 'Linda', 'Stark'];
-
-export const DUMMY_EXPENSES: Expense[] = [
-  {
-    id: 1,
-    amount: 400,
-    description: 'Description',
-    name: NAMES[0],
-    date: new Date(),
-  },
-  {
-    id: 2,
-    amount: 300,
-    description: 'Description',
-    name: NAMES[3],
-    date: new Date(),
-  },
-  {
-    id: 3,
-    amount: 200,
-    description: 'Description',
-    name: NAMES[2],
-    date: new Date(),
-  },
-  {
-    id: 4,
-    amount: 100,
-    description: 'Description',
-    name: NAMES[1],
-    date: new Date(),
-  },
-];
 
 export const DUMMY_BILLS: Bill[] = [
   {
@@ -110,90 +86,127 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
 
   const isPaid = false;
 
-  const {setSocket, socket, accessToken,type} = useUser(
-    state => state,
-  );
+  const {setSocket, socket, accessToken, type} = useUser(state => state);
 
   const [plans, setPlans] = useState<any[]>([]);
-  const fetchPlans = async ()=> {
+  const fetchPlans = async () => {
     try {
       const responce = await client(`/${type}/plans`, {
         headers: {
-          authorization : `Bearer ${accessToken}` ,
-        }
+          authorization: `Bearer ${accessToken}`,
+        },
       });
       setPlans(responce.data.plans.reverse());
-      
-    } catch (error:any) {
+    } catch (error: any) {
       Alert.alert(error.message);
       console.log(error);
     }
-  }
+  };
 
   const [equipments, setEquipments] = useState<any[]>([]);
-const fetchEquipments = async () => {
-  try {
-    const response = await client.get(`/${type}/equipments`, {
-      headers: {
-        authorization: `Bearer ${accessToken}`, // Replace with your actual token
-      },
-    });
-    setEquipments(response.data.equipments.reverse());
-  } catch (error) {
-    console.error('Error fetching announcements:', error);
-  }
-}
+  const fetchEquipments = async () => {
+    try {
+      const response = await client.get(`/${type}/equipments`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setEquipments(response.data.equipments.reverse());
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
 
-useEffect(() => {
-  fetchEquipments();
-  fetchPlans(),
-  establishWebSocketConnection();
-}, []);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const fetchExpense = async () => {
+    try {
+      const responce = await client.get(`${type}/expenses`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setExpenses(responce.data.expenses.reverse());
+    } catch (error) {}
+  };
 
-const establishWebSocketConnection = ()=>{
-  if(!socket){
-    const newSocket = io(ioString);
-    setSocket(newSocket)
-    console.log('creating new socket')
-  }
-  if(socket){
-    socket.on('newEquipment', (data: any)=> {
-      console.log("New equipmenet added:",data);
-      setEquipments((prevEquipments) => [data, ...prevEquipments])
-    });
+  useEffect(() => {
+    fetchEquipments();
+    fetchExpense();
+    fetchPlans(), 
+    establishWebSocketConnection();
+  }, []);
 
-    //equipments
-    socket.on('updateEquipment', (data:any)=> {
-      console.log("Im here");
-      const {oldName,name, price, description, status} = data;
-      const newEq = {name, price, description, status};
-      setEquipments((prevEquipments)=> {
-        const filtered = prevEquipments.filter((item)=> item.name != oldName);
-        return [newEq, ...filtered]
-      })
-    });
-    socket.on('deleteEquipment', (data:any)=> {
-      const {deletedName} = data; 
-      setEquipments((prevEquipments)=>{
-        return prevEquipments.filter((item)=> item.name !== deletedName)
-      })
-    });
-    
-    //plans
-    socket.on('newPlan', (data:any)=> {
-      console.log(data)
-      setPlans((prevPlans)=> [data, ...prevPlans])
-    });
-    socket.on('updatePlan', (data:any)=> {
-      console.log("Im here");
-      const {plan_id} = data;
-      setEquipments((prevPlans)=> {
-        const filtered = prevPlans.filter((item)=> item.plan_id != plan_id );
-        return [data, ...filtered]
-      })
-    });
-  }
-}
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('creating new socket');
+    }
+    if (socket) {
+      socket.on('newEquipment', (data: any) => {
+        console.log('New equipmenet added:', data);
+        setEquipments(prevEquipments => [data, ...prevEquipments]);
+      });
+
+      //equipments
+      socket.on('updateEquipment', (data: any) => {
+        console.log('Im here');
+        const {oldName, name, price, description, status} = data;
+        const newEq = {name, price, description, status};
+        setEquipments(prevEquipments => {
+          const filtered = prevEquipments.filter(item => item.name != oldName);
+          return [newEq, ...filtered];
+        });
+      });
+      socket.on('deleteEquipment', (data: any) => {
+        const {deletedName} = data;
+        setEquipments(prevEquipments => {
+          return prevEquipments.filter(item => item.name !== deletedName);
+        });
+      });
+
+      //plans
+      socket.on('newPlan', (data: any) => {
+        console.log(data);
+        setPlans(prevPlans => [data, ...prevPlans]);
+      });
+      socket.on('updatePlan', (data: any) => {
+        console.log('Im here');
+        const {plan_id} = data;
+        setEquipments(prevPlans => {
+          const filtered = prevPlans.filter(item => item.plan_id != plan_id);
+          return [data, ...filtered];
+        });
+      });
+      socket.on('deletePlan', (data: any) => {
+        const {plan_id} = data;
+        setPlans(prevPlans => {
+          return prevPlans.filter(item => item.plan_id !== plan_id);
+        });
+      });
+      //expense
+      socket.on('newExpense', (data: any) => {
+        setExpenses(prevExpenses => [data, ...prevExpenses]);
+      });
+      socket.on('updateExpense', (data: any) => {
+        const {oldId, username, amount, description, expense_date} = data;
+        const newExpense = {username, amount, description, expense_date};
+        setExpenses(prevExpenses => {
+          const filtered = prevExpenses.filter(
+            item => item.expense_id != oldId,
+          );
+          return [newExpense, ...filtered];
+        });
+      });
+      socket.on('deleteExpense', (data: any) => {
+        const { deletedId } = data;
+        setExpenses(prevExpenses => {
+          const updatedExpenses = prevExpenses.filter(item => item.expense_id != deletedId);
+          return updatedExpenses;
+        });
+      });
+    }
+  };
 
   // CHANGE DATA FROM API..
   return (
@@ -228,7 +241,7 @@ const establishWebSocketConnection = ()=>{
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={plans.slice(0,3)}
+              data={plans.slice(0, 3)}
               scrollEnabled={false}
               renderItem={SubscriptionPlanItem}
               ListFooterComponent={() =>
@@ -251,7 +264,7 @@ const establishWebSocketConnection = ()=>{
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={equipments.slice(0,3)}
+              data={equipments.slice(0, 3)}
               scrollEnabled={false}
               renderItem={EquipmentItem}
               ListFooterComponent={() =>
@@ -293,7 +306,7 @@ const establishWebSocketConnection = ()=>{
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_EXPENSES}
+              data={expenses.slice(0, 3)}
               scrollEnabled={false}
               renderItem={ExpensesItem}
               ListFooterComponent={() =>

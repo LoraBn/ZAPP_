@@ -1,4 +1,4 @@
-import { Socket } from 'socket.io-client';
+import {Socket} from 'socket.io-client';
 import {create} from 'zustand';
 
 interface UseUser {
@@ -8,11 +8,13 @@ interface UseUser {
   expiresAt: number | null;
   type: 'owner' | 'customer' | 'employee' | null;
   socket: Socket | null;
+  employees: string[] | null;
   setAccessToken: (token: string) => void;
   setRefreshToken: (token: string) => void;
   setExpiresAtToken: (expiresAt: number) => void;
   setType: (type: 'owner' | 'customer' | 'employee') => void;
   setSocket: (socket: Socket | null) => void;
+  setEmployees: (employees: string[] | null) => void;
   signOut: () => void;
 }
 
@@ -23,6 +25,7 @@ export const useUser = create<UseUser>(set => {
     expiresAt: null,
     type: null,
     socket: null,
+    employees: null,
     signOut() {
       set(() => {
         return {
@@ -31,6 +34,7 @@ export const useUser = create<UseUser>(set => {
           type: null,
           refreshToken: null,
           socket: null,
+          employees: null,
         };
       });
     },
@@ -55,9 +59,14 @@ export const useUser = create<UseUser>(set => {
       });
     },
     setSocket(socket) {
-      set(()=>{
-        return {socket}
-      })
+      set(() => {
+        return {socket};
+      });
+    },
+    setEmployees(employees) {
+      set(() => {
+        return { employees };
+      });
     },
   };
 });

@@ -492,12 +492,12 @@ const createEquipment = async (req, res) => {
         res.status(500).json({ error_message: "Internal Server Error" });
       } else {
         let room = `all${owner_id}`;
-        req.app
-          .get("io")
-          .to(room)
-          .emit("newEquipment", {
-            name, price, description, status
-          });
+        req.app.get("io").to(room).emit("newEquipment", {
+          name,
+          price,
+          description,
+          status,
+        });
         console.log("equipment sent to room", room);
         res.status(201).json({ message: "Equipment added successfully!" });
       }
@@ -522,9 +522,9 @@ const getEquipments = async (req, res) => {
 const updateEquipment = async (req, res) => {
   try {
     const equipmentName = req.params.name;
-    const oldName = equipmentName
+    const oldName = equipmentName;
     const ownerId = req.user.userId;
-    console.log('updating the equipment');
+    console.log("updating the equipment");
 
     const { name, price, description, status } = req.body;
 
@@ -563,12 +563,14 @@ const updateEquipment = async (req, res) => {
 
     if (updateResult.rows.length > 0) {
       let room = `all${ownerId}`;
-        req.app
-          .get("io")
-          .emit("updateEquipment", {
-            oldName,name, price, description, status
-          });
-        console.log("equipment sent to room", room);
+      req.app.get("io").emit("updateEquipment", {
+        oldName,
+        name,
+        price,
+        description,
+        status,
+      });
+      console.log("equipment sent to room", room);
       res.status(200).json({ message: "Equipment updated successfully!" });
     } else {
       res
@@ -581,11 +583,10 @@ const updateEquipment = async (req, res) => {
   }
 };
 
-
 const deleteEquipment = async (req, res) => {
   try {
     const equipmentName = req.params.name;
-    const deletedName = equipmentName
+    const deletedName = equipmentName;
     const ownerId = req.user.userId;
 
     // Check if the equipment exists
@@ -612,12 +613,10 @@ const deleteEquipment = async (req, res) => {
 
     if (deleteResult.rowCount > 0) {
       let room = `all${ownerId}`;
-        req.app
-          .get("io")
-          .emit("deleteEquipment", {
-            deletedName
-          });
-        console.log("equipment sent to room", room);
+      req.app.get("io").emit("deleteEquipment", {
+        deletedName,
+      });
+      console.log("equipment sent to room", room);
       res.status(200).json({ message: "Equipment deleted successfully!" });
     } else {
       res.status(500).json({ error_message: "Error deleting equipment" });
@@ -666,7 +665,7 @@ const createAnnouncement = async (req, res) => {
     ]);
 
     let room;
-    switch(target_type){
+    switch (target_type) {
       case "BOTH":
         room = `all${req.user.userId}`;
         break;
@@ -677,12 +676,12 @@ const createAnnouncement = async (req, res) => {
         room = `cust${req.user.userId}`;
         break;
     }
-      
+
     req.app
       .get("io")
       .to(room)
       .emit("newAnnouncement", { announcement_title, announcement_message });
-    console.log("annoncement sent to room", room)
+    console.log("annoncement sent to room", room);
     res.status(201).json({
       message: "Announcement created",
       announcementTitle: announcement_title,
@@ -735,16 +734,27 @@ const createPlan = async (req, res) => {
     const ownerId = req.user.userId;
 
     // Check if the plan name already exists
-    const checkExistingPlanQuery = "SELECT COUNT(*) FROM plans_prices WHERE plan_name = $1 AND owner_id = $2";
-    const existingPlan = await pool.query(checkExistingPlanQuery, [plan_name, ownerId]);
+    const checkExistingPlanQuery =
+      "SELECT COUNT(*) FROM plans_prices WHERE plan_name = $1 AND owner_id = $2";
+    const existingPlan = await pool.query(checkExistingPlanQuery, [
+      plan_name,
+      ownerId,
+    ]);
 
     if (existingPlan.rows[0].count > 0) {
-      return res.status(400).json({ error_message: "Plan name already exists." });
+      return res
+        .status(400)
+        .json({ error_message: "Plan name already exists." });
     }
 
     // Insert the new plan if the plan name is unique
-    const insertPlanQuery = "INSERT INTO plans_prices (plan_name, plan_price, owner_id) VALUES ($1, $2, $3) RETURNING plan_id";
-    const newPlan = await pool.query(insertPlanQuery, [plan_name, plan_price, ownerId]);
+    const insertPlanQuery =
+      "INSERT INTO plans_prices (plan_name, plan_price, owner_id) VALUES ($1, $2, $3) RETURNING plan_id";
+    const newPlan = await pool.query(insertPlanQuery, [
+      plan_name,
+      plan_price,
+      ownerId,
+    ]);
 
     // Emit notification to relevant room
     let room = `emp${ownerId}`;
@@ -764,7 +774,6 @@ const createPlan = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const updatePlan = async (req, res) => {
   try {
@@ -795,22 +804,20 @@ const updatePlan = async (req, res) => {
         SET plan_price = $1
         WHERE plan_id = $2 AND owner_id = $3
         RETURNING date`,
-      values: [
-        plan_price,
-        planId,
-        ownerId,
-      ],
+      values: [plan_price, planId, ownerId],
     };
 
     const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
-      console.log("im here")
+      console.log("im here");
       let room = `emp${ownerId}`;
-      req.app
-        .get("io")
-        .to(room)
-        .emit("updatePlan", { plan_id: planId, plan_name: existingPlan.plan_name, plan_price, date: updateResult.rows[0].date });
+      req.app.get("io").to(room).emit("updatePlan", {
+        plan_id: planId,
+        plan_name: existingPlan.plan_name,
+        plan_price,
+        date: updateResult.rows[0].date,
+      });
       res.status(200).json({
         plan_id: planId,
         message: "Plan updated successfully!",
@@ -826,7 +833,6 @@ const updatePlan = async (req, res) => {
   }
 };
 
-
 const deletePlan = async (req, res) => {
   try {
     const planId = req.params.id;
@@ -841,10 +847,7 @@ const deletePlan = async (req, res) => {
 
     if (deleteResult.rowCount > 0) {
       let room = `emp${ownerId}`;
-      req.app
-        .get("io")
-        .to(room)
-        .emit("deletePlan", { plan_id: planId});
+      req.app.get("io").to(room).emit("deletePlan", { plan_id: planId });
       res.status(202).json({ message: "Plan deleted successfully" });
     } else {
       res
@@ -1233,12 +1236,17 @@ const getExpenses = async (req, res) => {
   try {
     const ownerId = req.user.userId;
 
-    const queryText = "SELECT * FROM expenses WHERE owner_id = $1";
+    const queryText = `
+      SELECT exp.*, emp.username
+      FROM expenses AS exp
+      INNER JOIN employees AS emp ON exp.employee_id = emp.employee_id
+      WHERE exp.owner_id = $1`;
+
     const result = await pool.query(queryText, [ownerId]);
 
     res.status(200).json({ expenses: result.rows });
   } catch (error) {
-    console.error("Error fetching bills:", error);
+    console.error("Error fetching expenses:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -1248,28 +1256,47 @@ const createExpense = async (req, res) => {
     const { username, description, amount } = req.body;
     const ownerId = req.user.userId;
 
-    const employeeId = await getEmployeeIdForOwner(ownerId, username);
-    if (!employeeId) {
-      res.status(401).json({ error_message: "Error finding the employee" });
+    // Retrieve employee id
+    const employeeQuery = `
+      SELECT employee_id FROM employees 
+      WHERE username = $1 AND owner_id = $2`;
+    const employeeResult = await pool.query(employeeQuery, [username, ownerId]);
 
-      const queryText = `INSERT INTO expenses (owner_id, employee_id, description, amount) 
-        VALUES($1,$2,$3,$4)`;
+    if (employeeResult.rows.length === 0) {
+      return res
+        .status(401)
+        .json({ error_message: "Error finding the employee" });
+    }
 
-      const result = await pool.query(queryText, [
-        ownerId,
-        employeeId,
+    const employeeId = employeeResult.rows[0].employee_id;
+
+    // Insert expense
+    const insertQuery = `
+      INSERT INTO expenses (owner_id, employee_id, description, amount) 
+      VALUES ($1, $2, $3, $4)
+      RETURNING expense_id, expense_date`;
+    const insertResult = await pool.query(insertQuery, [
+      ownerId,
+      employeeId,
+      description,
+      amount,
+    ]);
+
+    if (insertResult.rows.length > 0) {
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("newExpense", {
+        username,
         description,
         amount,
-      ]);
-
-      if (result.rows.length > 0) {
-        res.status(201).json({
-          expenseId: result.rows[0].expense_id,
-          message: "expense created successfully!",
-        });
-      } else {
-        res.status(500).json({ error_message: "Failed to create expense" });
-      }
+        employee_id: employeeId,
+        expense_date: insertResult.rows[0].expense_date,
+      });
+      res.status(201).json({
+        expenseId: insertResult.rows[0].expense_id,
+        message: "Expense created successfully!",
+      });
+    } else {
+      res.status(500).json({ error_message: "Failed to create expense" });
     }
   } catch (error) {
     console.error("Error creating expense:", error);
@@ -1283,18 +1310,9 @@ const updateExpense = async (req, res) => {
     const expenseId = req.params.id;
     const { username, description, amount } = req.body;
 
-    // Get the employee ID associated with the provided username and owner ID
-    const employeeId = await getEmployeeIdForOwner(ownerId, username);
-
-    if (!employeeId) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the employee" });
-    }
-
     // Check if the expense exists and is owned by the provided owner
     const expenseExistsQuery =
-      "SELECT * FROM expenses WHERE expense_id = $1 AND owner_id = $2";
+      "SELECT exp.*, emp.username FROM expenses AS exp INNER JOIN employees AS emp ON exp.employee_id = emp.employee_id WHERE exp.expense_id = $1 AND exp.owner_id = $2";
     const expenseExistsResult = await pool.query(expenseExistsQuery, [
       expenseId,
       ownerId,
@@ -1307,10 +1325,26 @@ const updateExpense = async (req, res) => {
     }
 
     const existingExpense = expenseExistsResult.rows[0];
+    const employeeId = existingExpense.employee_id;
+
+    // Get the employee username associated with the provided employee ID
+    const employeeUsernameQuery =
+      "SELECT username FROM employees WHERE employee_id = $1";
+    const employeeUsernameResult = await pool.query(employeeUsernameQuery, [
+      employeeId,
+    ]);
+
+    if (employeeUsernameResult.rows.length === 0) {
+      return res
+        .status(500)
+        .json({ error_message: "Failed to retrieve employee username" });
+    }
+
+    const employeeUsername = employeeUsernameResult.rows[0].username;
 
     // Determine the values to update
     const updatedValues = {
-      employee_id: employeeId || existingExpense.employee_id,
+      employee_id: employeeId,
       description: description || existingExpense.description,
       amount: amount || existingExpense.amount,
     };
@@ -1321,7 +1355,7 @@ const updateExpense = async (req, res) => {
         UPDATE expenses
         SET employee_id = $1, description = $2, amount = $3
         WHERE expense_id = $4 AND owner_id = $5
-        RETURNING expense_id`,
+        RETURNING expense_date`,
       values: [
         updatedValues.employee_id,
         updatedValues.description,
@@ -1334,8 +1368,20 @@ const updateExpense = async (req, res) => {
     const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
+      const { expense_date } = updateResult.rows[0]; // Retrieve the updated expense date
+
+      // Emit the update event with necessary details
+      req.app.get("io").emit("updateExpense", {
+        oldId: expenseId,
+        username: employeeUsername,
+        amount: updatedValues.amount,
+        description: updatedValues.description,
+        expense_date: expense_date, // Sending the updated expense date
+      });
+
       res.status(200).json({
-        expense_id: updateResult.rows[0].expense_id,
+        expense_id: expenseId, // Using `expenseId` instead of `updateResult.rows[0].expense_id`
+        username: employeeUsername,
         message: "Expense updated successfully!",
       });
     } else {
@@ -1346,6 +1392,7 @@ const updateExpense = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const deleteExpense = async (req, res) => {
   try {
@@ -1375,6 +1422,8 @@ const deleteExpense = async (req, res) => {
     const deleteResult = await pool.query(deleteQuery);
 
     if (deleteResult.rowCount > 0) {
+      let room = `emp${ownerId}`
+      req.app.get('io').to(room).emit("deleteExpense", {deletedId : expenseId})
       res.status(202).json({ message: "Expense deleted successfully" });
     } else {
       res.status(500).json({ error_message: "Failed to delete expense" });
