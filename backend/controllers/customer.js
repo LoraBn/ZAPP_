@@ -235,6 +235,18 @@ const closeSupportTicketCus = async (req, res) => {
   }
 };
 
+const getKwhPriceCus = async (req, res) => {
+  try {
+    const ownerId = req.user.ownerId;
+    const queryText =
+      "SELECT * FROM kwh_prices  WHERE owner_id = $1 RETURNING price_id";
+    const results = pool.query(queryText, [ownerId]);
+    res.status(200).json({ price: results[0] });
+  } catch (error) {}
+  console.error("Error fetching plans:", error);
+  res.status(500).json({ error_message: "Internal Server Error" });
+};
+
 const getAllTicketRepliesCus = async (req, res) => {
   try {
     const customerId = req.user.userId;
@@ -334,4 +346,5 @@ module.exports = {
   closeSupportTicketCus,
   getAllTicketRepliesCus,
   createReplyCus,
+  getKwhPriceCus,
 };

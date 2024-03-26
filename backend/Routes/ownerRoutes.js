@@ -54,12 +54,15 @@ const {
   createAlertReply,
   getAllAlertReplies,
   deleteSupportTicket,
+  getKwhPrice,
+  createPrice,
+  updatePrice,
+  deletePrice,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
 
 module.exports = function (io) {
-
   router.use(authenticateOwnerToken, (req, res, next) => {
     // Join the room when the request is authenticated
     io.on("connection", (socket) => {
@@ -69,7 +72,7 @@ module.exports = function (io) {
       socket.join(room2);
       const room3 = `cust${req.user.userId}`;
       socket.join(room3);
-      console.log("joined room", room1,room2, room3);
+      console.log("joined room", room1, room2, room3);
 
       // Handle socket disconnection
       socket.on("disconnect", () => {
@@ -119,6 +122,12 @@ module.exports = function (io) {
     authenticateOwnerToken,
     deleteAnnouncement
   );
+
+  //Kwh_prices
+  router.get("/price", authenticateOwnerToken, getKwhPrice);
+  router.post("/price",authenticateOwnerToken, createPrice);
+  router.put("/price/:id",authenticateOwnerToken, updatePrice);
+  router.delete("/price/:id", authenticateOwnerToken, deletePrice)
 
   //subscription plan
   router.get("/plans", authenticateOwnerToken, getPlans);

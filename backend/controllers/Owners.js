@@ -716,6 +716,132 @@ const deleteAnnouncement = async (req, res) => {
   }
 };
 
+const getKwhPrice = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const queryText =
+      "SELECT * FROM kwh_prices  WHERE owner_id = $1 RETURNING price_id";
+    const results = pool.query(queryText, [ownerId]);
+    res.status(200).json({ price: results[0] });
+  } catch (error) {}
+  console.error("Error fetching plans:", error);
+  res.status(500).json({ error_message: "Internal Server Error" });
+};
+
+const createPrice = async (req, res) => {
+  try {
+    const { kwh_price } = req.body;
+    const ownerId = req.user.userId;
+
+    // Insert new price
+    const insertPriceQuery =
+      "INSERT INTO kwh_prices (kwh_price, owner_id) VALUES ($1, $2) RETURNING price_id";
+    const newPrice = await pool.query(insertPriceQuery, [kwh_price, ownerId]);
+
+    // Emit notification to relevant room
+    let room = `all${ownerId}`;
+    req.app.get("io").to(room).emit("newPrice", {
+      price_id: newPrice.rows[0].price_id,
+      kwh_price,
+      date: newPrice.rows[0].date,
+    });
+
+    // Send response
+    res.status(201).json({
+      price_id: newPrice.rows[0].price_id,
+      message: "Price created successfully!",
+    });
+  } catch (error) {
+    console.error("Error creating price:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const updatePrice = async (req, res) => {
+  try {
+    const priceId = req.params.id;
+    const ownerId = req.user.userId;
+    console.log("updating the price");
+
+    const { kwh_price } = req.body;
+
+    // Check if the price exists
+    const priceExistsQuery =
+      "SELECT * FROM kwh_prices WHERE price_id = $1 AND owner_id = $2";
+    const priceExistsResult = await pool.query(priceExistsQuery, [
+      priceId,
+      ownerId,
+    ]);
+
+    if (priceExistsResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error_message: "No price found with the provided ID" });
+    }
+
+    // Update the price
+    const updateQuery = {
+      text: `
+        UPDATE kwh_prices
+        SET kwh_price = $1
+        WHERE price_id = $2 AND owner_id = $3
+        RETURNING *`,
+      values: [
+        kwh_price || priceExistsResult.rows[0].kwh_price,
+        priceId,
+        ownerId,
+      ],
+    };
+
+    const updateResult = await pool.query(updateQuery);
+
+    if (updateResult.rows.length > 0) {
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("updatePrice", {
+        price_id: priceId,
+        kwh_price,
+      });
+      console.log("price sent to room", room);
+      res.status(200).json({ message: "Price updated successfully!" });
+    } else {
+      res
+        .status(404)
+        .json({ error_message: "No price found with the provided ID" });
+    }
+  } catch (error) {
+    console.error("Error updating price:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const deletePrice = async (req, res) => {
+  try {
+    const priceId = req.params.id;
+    const ownerId = req.user.userId;
+
+    // Delete the price
+    const deleteQuery = {
+      text: "DELETE FROM kwh_prices WHERE price_id = $1 AND owner_id = $2",
+      values: [priceId, ownerId],
+    };
+
+    const deleteResult = await pool.query(deleteQuery);
+
+    if (deleteResult.rowCount > 0) {
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("deletePrice", { price_id: priceId });
+      res.status(202).json({ message: "Price deleted successfully" });
+    } else {
+      res
+        .status(404)
+        .json({ error_message: "No price found with the provided ID" });
+    }
+  } catch (error) {
+    console.error("Error deleting price:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
 const getPlans = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2161,6 +2287,10 @@ module.exports = {
   getAnnouncements,
   createAnnouncement,
   deleteAnnouncement,
+  getKwhPrice,
+  createPrice,
+  updatePrice,
+  deletePrice,
   getPlans,
   createPlan,
   updatePlan,

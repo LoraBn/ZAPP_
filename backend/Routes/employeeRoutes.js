@@ -17,6 +17,7 @@ const {
   createAlertTicketEmp,
   getAnnouncementsEmp,
   getElectricScheduleEmp,
+  getKwhPriceEmp,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -28,7 +29,7 @@ module.exports = function (io) {
       socket.join(room1);
       const room2 = `emp${req.user.ownerId}`;
       socket.join(room2);
-      console.log("joined room", room1,room2);
+      console.log("joined room", room1, room2);
 
       // Handle socket disconnection
       socket.on("disconnect", () => {
@@ -66,6 +67,9 @@ module.exports = function (io) {
   router.get("/bills/:username", authenticateEmployeeToken, getCustomerBillEmp);
   router.post("/bills", authenticateEmployeeToken, createBillEmp);
   router.put("/bills/:id", authenticateEmployeeToken, updateBillEmp);
+
+  //Price
+  router.get("/price", authenticateEmployeeToken, getKwhPriceEmp);
 
   //alerts
   router.get("/issues/open", authenticateEmployeeToken, getAllOpenAlertsEmp);
