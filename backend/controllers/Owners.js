@@ -1285,6 +1285,7 @@ const createExpense = async (req, res) => {
     if (insertResult.rows.length > 0) {
       let room = `emp${ownerId}`;
       req.app.get("io").to(room).emit("newExpense", {
+        expense_id:insertResult.rows[0].expense_id,
         username,
         description,
         amount,
@@ -1373,6 +1374,7 @@ const updateExpense = async (req, res) => {
       // Emit the update event with necessary details
       req.app.get("io").emit("updateExpense", {
         oldId: expenseId,
+        expense_id: expenseId,
         username: employeeUsername,
         amount: updatedValues.amount,
         description: updatedValues.description,
