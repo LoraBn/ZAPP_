@@ -491,6 +491,14 @@ const createEquipment = async (req, res) => {
         console.error("Error creating equipment:", err);
         res.status(500).json({ error_message: "Internal Server Error" });
       } else {
+        let room = `all${owner_id}`;
+        req.app
+          .get("io")
+          .to(room)
+          .emit("newEquipment", {
+            name, price, description, status
+          });
+        console.log("equipment sent to room", room);
         res.status(201).json({ message: "Equipment added successfully!" });
       }
     }
@@ -514,7 +522,10 @@ const getEquipments = async (req, res) => {
 const updateEquipment = async (req, res) => {
   try {
     const equipmentName = req.params.name;
+    const oldName = equipmentName
     const ownerId = req.user.userId;
+    console.log('updating the equipment');
+
     const { name, price, description, status } = req.body;
 
     // Check if the equipment exists
@@ -531,28 +542,18 @@ const updateEquipment = async (req, res) => {
         .json({ error_message: "No equipment found with the provided name" });
     }
 
-    const existingEquipment = equipmentExistsResult.rows[0];
-
-    // Determine the values to update
-    const updatedValues = {
-      name: name || existingEquipment.name,
-      price: price || existingEquipment.price,
-      description: description || existingEquipment.description,
-      status: status || existingEquipment.status,
-    };
-
     // Update the equipment
     const updateQuery = {
       text: `
         UPDATE equipments
         SET name = $1, price = $2, description = $3, status = $4
         WHERE name = $5 AND owner_id = $6
-        RETURNING equipement_id`,
+        RETURNING *`,
       values: [
-        updatedValues.name,
-        updatedValues.price,
-        updatedValues.description,
-        updatedValues.status,
+        name || equipmentExistsResult.rows[0].name,
+        price || equipmentExistsResult.rows[0].price,
+        description || equipmentExistsResult.rows[0].description,
+        status || equipmentExistsResult.rows[0].status,
         equipmentName,
         ownerId,
       ],
@@ -560,7 +561,14 @@ const updateEquipment = async (req, res) => {
 
     const updateResult = await pool.query(updateQuery);
 
-    if (updateResult.rowCount > 0) {
+    if (updateResult.rows.length > 0) {
+      let room = `all${ownerId}`;
+        req.app
+          .get("io")
+          .emit("updateEquipment", {
+            oldName,name, price, description, status
+          });
+        console.log("equipment sent to room", room);
       res.status(200).json({ message: "Equipment updated successfully!" });
     } else {
       res
@@ -573,9 +581,11 @@ const updateEquipment = async (req, res) => {
   }
 };
 
+
 const deleteEquipment = async (req, res) => {
   try {
     const equipmentName = req.params.name;
+    const deletedName = equipmentName
     const ownerId = req.user.userId;
 
     // Check if the equipment exists
@@ -601,6 +611,13 @@ const deleteEquipment = async (req, res) => {
     ]);
 
     if (deleteResult.rowCount > 0) {
+      let room = `all${ownerId}`;
+        req.app
+          .get("io")
+          .emit("deleteEquipment", {
+            deletedName
+          });
+        console.log("equipment sent to room", room);
       res.status(200).json({ message: "Equipment deleted successfully!" });
     } else {
       res.status(500).json({ error_message: "Error deleting equipment" });
@@ -649,7 +666,6 @@ const createAnnouncement = async (req, res) => {
     ]);
 
     let room;
-    const announcementId = result.rows[0].announcement_id;
     switch(target_type){
       case "BOTH":
         room = `all${req.user.userId}`;

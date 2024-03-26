@@ -6,6 +6,8 @@ import {ImageStrings} from '../../assets/image-strings';
 import {useForm} from 'react-hook-form';
 import TextInput from './text-input';
 import DropdownInput from './dropdown-input';
+import client from '../../API/client';
+import { useUser } from '../../storage/use-user';
 
 type EquipmentEditableItemProps = {
   item: Equipment;
@@ -15,7 +17,7 @@ type EquipmentEditableItemProps = {
 export type EquipmentForm = {
   name: string;
   price: string;
-  status: 'Active' | 'Inactive';
+  status: "ACTIVE" | "INACTIVE";
   description: string;
 };
 
@@ -25,17 +27,45 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
       description: item.description ?? '',
       name: item.name ?? '',
       price: item.price ? item.price.toString() : '',
-      status: item.status ?? 'Active',
+      status: item.status ?? "ACTIVE",
     },
   });
+  const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
 
   const [isEditing, setIsEditing] = useState(false);
 
-  function onSubmit(data: EquipmentForm) {
+  async function onSubmit(data: EquipmentForm) {
     //HERE
-    console.log(data);
     //SUCCESS
+    try {
+      const responce = await client.put(`/${type}/equipment/${encodeURIComponent(item.name)}`,data, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        },
+        
+      });
+      console.log(responce.data.message) 
+      
+    } catch (error) {
+      console.log(error)
+    }
     setIsEditing(false);
+  }
+
+  async function deleteItem(name:string){
+    try {
+      const responce = await client.delete(`/${type}/equipment/${encodeURIComponent(name)}`,{
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+      console.log(responce.data.message);
+      Alert.alert(responce.data.message)
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   return (
@@ -70,7 +100,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
           <DropdownInput
             control={control}
             name="status"
-            items={['Active', 'Inactive']}
+            items={["ACTIVE", "INACTIVE"]}
             backgroundColor={Colors.White}
             textColor={Colors.Black}
             placeholder="Status"
@@ -119,6 +149,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
                   text: 'Confirm',
                   onPress: () => {
                     // HERE
+                    deleteItem(item.name);
                   },
                 },
               ],

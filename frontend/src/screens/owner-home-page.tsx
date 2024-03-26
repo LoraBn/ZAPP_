@@ -120,6 +120,22 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     {value: 5, label: 'E', frontColor: '#9272b1'},
   ];
 
+
+//Equipments
+const [equipments, setEquipments] = useState<any[]>([]);
+const fetchEquipments = async () => {
+  try {
+    const response = await client.get(`/${type}/equipments`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`, // Replace with your actual token
+      },
+    });
+    setEquipments(response.data.equipments.reverse());
+  } catch (error) {
+    console.error('Error fetching announcements:', error);
+  }
+}
+
 //Announcements
 const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
@@ -129,6 +145,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnnouncements();
+    fetchEquipments();
     establishWebSocketConnection();
     return () => {
       if (socket != null) {
@@ -156,6 +173,25 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
       setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+    });
+    newSocket.on('newEquipment', (data: any)=> {
+      console.log("New equipmenet added:",data);
+      setEquipments((prevEquipments) => [data, ...prevEquipments])
+    });
+    newSocket.on('updateEquipment', (data:any)=> {
+      console.log("Im here");
+      const {oldName,name, price, description, status} = data;
+      const newEq = {name, price, description, status};
+      setEquipments((prevEquipments)=> {
+        const filtered = prevEquipments.filter((item)=> item.name != oldName);
+        return [newEq, ...filtered]
+      })
+    });
+    newSocket.on('deleteEquipment', (data:any)=> {
+      const {deletedName} = data; 
+      setEquipments((prevEquipments)=>{
+        return prevEquipments.filter((item)=> item.name !== deletedName)
+      })
     });
   };
 
@@ -204,7 +240,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_EQUIPMENT}
+              data={equipments.slice(0,3)}
               scrollEnabled={false}
               renderItem={EquipmentItem}
               ListFooterComponent={() =>

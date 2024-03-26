@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Alert, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import {EquipmentForm} from './equipment-editable-item';
@@ -7,6 +7,8 @@ import TextInput from './text-input';
 import {Colors} from '../../utils/colors';
 import ElevatedCard from './elevated-card';
 import DropdownInput from './dropdown-input';
+import client from '../../API/client';
+import { useUser } from '../../storage/use-user';
 
 type AddEquipmentItemProps = {
   onSuccess?: () => void;
@@ -14,15 +16,28 @@ type AddEquipmentItemProps = {
 
 const AddEquipmentItem = ({onSuccess}: AddEquipmentItemProps) => {
   const {control, handleSubmit} = useForm<EquipmentForm>({
-    defaultValues: {description: '', name: '', price: '', status: 'Active'},
+    defaultValues: {description: '', name: '', price: '', status: 'ACTIVE'},
   });
 
-  function onSubmit(data: EquipmentForm) {
+  const {setSocket, socket, accessToken,type} = useUser(
+    state => state,
+  );
+
+  async function onSubmit(data: EquipmentForm) {
     // HERE
     console.log(data);
     // SUCCESS IF U DONT USE REACT QUERY/RTK
     if (onSuccess) {
       onSuccess();
+      try {
+        const responce = await client.post(`/${type}/equipments`, data, {
+          headers: {authorization: `Bearer ${accessToken}`},
+        })
+        console.log(responce.data.message);
+        Alert.alert(responce.data.message)
+      } catch (error) {
+        console.log(error)
+      }
     }
   }
 
@@ -47,7 +62,7 @@ const AddEquipmentItem = ({onSuccess}: AddEquipmentItemProps) => {
             placeholder="Status"
             textColor={Colors.Black}
             backgroundColor={Colors.White}
-            items={['Active', 'Inactive']}
+            items={['ACTIVE', 'INACTIVE']}
           />
         </View>
         <View style={styles.textInputContainer}>
