@@ -10,6 +10,7 @@ import {AuthStackParams} from '../navigation/auth-stack-navigation';
 import {useUser} from '../storage/use-user';
 import dayjs from 'dayjs';
 import client from '../API/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SigninForm = {
   username: string;
@@ -38,6 +39,9 @@ const Signin = ({navigation}: SigninProps) => {
       setRefreshToken('MockTokenRefresh');
       setExpiresAtToken(dayjs(new Date()).unix());
       setType(responce.data.userType);
+
+      AsyncStorage.setItem('token', responce.data.token);
+      AsyncStorage.setItem('userType',responce.data.userType )
 
       console.log(responce.data.userType)
     }

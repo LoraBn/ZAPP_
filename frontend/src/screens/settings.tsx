@@ -6,6 +6,7 @@ import TextInput from '../components/ui/text-input';
 import {useForm} from 'react-hook-form';
 import ElevatedCard from '../components/ui/elevated-card';
 import {useUser} from '../storage/use-user';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SettingsForm = {
   bio: string;
@@ -32,6 +33,12 @@ const Settings = () => {
     // HERE
     console.log(data);
   }
+
+  async function signingOut() {
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('userType');
+    signOut()
+  }
   return (
     <View style={styles.screen}>
       <ScreenHeader>Profile</ScreenHeader>
@@ -55,7 +62,7 @@ const Settings = () => {
       </View>
       <View style={styles.actionButtons}>
         <ElevatedCard
-          onPress={() => signOut()}
+          onPress={() => signingOut()}
           textStyle={styles.elevatedButtonText}>
           Sign Out
         </ElevatedCard>
