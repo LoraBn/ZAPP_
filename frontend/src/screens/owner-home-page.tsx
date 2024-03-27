@@ -256,7 +256,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={equipments.slice(0,3)}
+              data={equipments.length? equipments.slice(0,3) : [{ name: "No equipment"}]}
               scrollEnabled={false}
               renderItem={EquipmentItem}
               ListFooterComponent={() =>

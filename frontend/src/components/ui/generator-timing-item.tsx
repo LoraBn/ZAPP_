@@ -12,11 +12,11 @@ import {ImageStrings} from '../../assets/image-strings';
 type GeneratorTimingItemProps = {
   item: {
     id: string;
-    time_to_turn_on: Date;
-    time_to_turn_off: Date;
+    time_to_turn_on: string;
+    time_to_turn_off: string;
   };
   index: number;
-  field: ControllerRenderProps<GeneratorForm, 'timings'>;
+  field: ControllerRenderProps<GeneratorForm, 'schedule'>;
   disabled?: boolean;
   onDeletePress?: () => void;
   isEditing?: boolean;
@@ -48,7 +48,7 @@ const GeneratorTimingItem = ({
             onPress={() => setTimingOnOpen(true)}>
             <WhiteCard pointerEvents="none">
               <Text style={styles.onOffText}>
-                {formatDateToHoursAndMinutes(item.time_to_turn_on)}
+                {formatDateToHoursAndMinutes(new Date(item.time_to_turn_on))}
               </Text>
             </WhiteCard>
           </Card>
@@ -62,7 +62,7 @@ const GeneratorTimingItem = ({
             onPress={() => setTimingOffOpen(true)}>
             <WhiteCard pointerEvents="none">
               <Text style={styles.onOffText}>
-                {formatDateToHoursAndMinutes(item.time_to_turn_off)}
+                {formatDateToHoursAndMinutes(new Date(item.time_to_turn_off))}
               </Text>
             </WhiteCard>
           </Card>
@@ -84,7 +84,7 @@ const GeneratorTimingItem = ({
       <DatePicker
         modal
         mode="time"
-        date={item.time_to_turn_on}
+        date={new Date(item.time_to_turn_on)}
         open={timingOnOpen}
         onCancel={() => setTimingOnOpen(false)}
         onConfirm={date => {
@@ -101,7 +101,7 @@ const GeneratorTimingItem = ({
       <DatePicker
         modal
         mode="time"
-        date={item.time_to_turn_off}
+        date={new Date(item.time_to_turn_off)}
         open={timingOffOpen}
         onCancel={() => setTimingOffOpen(false)}
         onConfirm={date => {

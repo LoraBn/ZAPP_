@@ -55,7 +55,6 @@ const {
   getAllAlertReplies,
   deleteSupportTicket,
   getKwhPrice,
-  createPrice,
   updatePrice,
   deletePrice,
 } = require("../controllers/Owners");
@@ -125,8 +124,7 @@ module.exports = function (io) {
 
   //Kwh_prices
   router.get("/price", authenticateOwnerToken, getKwhPrice);
-  router.post("/price",authenticateOwnerToken, createPrice);
-  router.put("/price/:id",authenticateOwnerToken, updatePrice);
+  router.put("/price/",authenticateOwnerToken, updatePrice);
   router.delete("/price/:id", authenticateOwnerToken, deletePrice)
 
   //subscription plan
@@ -143,7 +141,7 @@ module.exports = function (io) {
     createElectricSchedule
   );
   router.put(
-    "/electric-schedule/:id",
+    "/electric-schedule/",
     authenticateOwnerToken,
     updateElectricSchedule
   );

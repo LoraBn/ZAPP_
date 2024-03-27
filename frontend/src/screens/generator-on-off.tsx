@@ -1,5 +1,5 @@
 import {FlatList, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import ScreenHeader from '../components/ui/screen-header';
 import {useController, useForm} from 'react-hook-form';
@@ -8,59 +8,133 @@ import ElevatedCard from '../components/ui/elevated-card';
 import uuid from 'react-native-uuid';
 import ListSeperator from '../components/ui/list-seperator';
 import GeneratorTimingItem from '../components/ui/generator-timing-item';
-import DropdownInput from '../components/ui/dropdown-input';
+import {useUser} from '../storage/use-user';
+import client from '../API/client';
 
 export type GeneratorForm = {
-  timings: {id: string; time_to_turn_on: Date; time_to_turn_off: Date}[];
+  schedule_id: number;
+  schedule: {id: string; time_to_turn_on: Date; time_to_turn_off: Date}[];
   kw_price: string;
 };
 
 const GeneratorOnOff = () => {
-  const {control, handleSubmit} = useForm<GeneratorForm>({
-    defaultValues: {kw_price: '', timings: []},
+  const {control, handleSubmit, setValue, getValues} = useForm<GeneratorForm>({
+    defaultValues: {kw_price: '', schedule: []},
   });
 
+  const {accessToken, type} = useUser(state => state);
+
+  useEffect(() => {
+    fetchSchdule();
+    fetchPrice();
+  }, []);
+
+  const editPrice = async (price: string) => {
+    try {
+      const responce = await client.put(`/${type}/price`, { kwh_price: price }, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if(responce){
+        setValue('kw_price', price);
+      }
+    } catch (error) {
+      console.log('Error updating price:', error);
+    }
+  };
+
+  const fetchPrice = async () => {
+    try {
+      const response = await client.get(`/${type}/price`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setValue('kw_price', `${response.data.price.kwh_price}`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
+
+  const fetchSchdule = async () => {
+    try {
+      const response = await client.get(`/${type}/electric-schedule`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.data.schedule.length > 0) {
+        const firstSchedule = response.data.schedule[0];
+
+        if (firstSchedule.schedule.length > 0) {
+          const scheduleArray = firstSchedule.schedule;
+          setValue('schedule', [...scheduleArray]);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const [isEditing, setIsEditing] = useState(false);
+  const {field} = useController({control, name: 'schedule', defaultValue: []});
 
-  const {field} = useController({control, name: 'timings', defaultValue: []});
-
-  function onSubmit(data: GeneratorForm) {
-    //HERE
+  async function onSubmit(data: GeneratorForm) {
     console.log(data);
-
-    //AA
     setIsEditing(false);
+
+    const responce2 = await editPrice(data.kw_price);
+    
+
+    const responce = await client.put(`${type}/electric-schedule`, data, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    console.log(responce.data.message);
   }
+  const handleDelete = async (index: number) => {
+    const newArray = [...field.value];
+    newArray.splice(index, 1);
+    field.onChange(newArray);
+
+    try {
+      await client.put(`${type}/electric-schedule`, { schedule: newArray }, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } catch (error) {
+      console.log('Error updating schedule:', error);
+    }
+  };
 
   return (
     <View style={styles.screen}>
       <ScreenHeader>Generator</ScreenHeader>
       <FlatList
         contentContainerStyle={styles.contentContainer}
-        // eslint-disable-next-line react/no-unstable-nested-components
         ListHeaderComponent={() => (
           <View style={styles.gap25}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Kilowat price:</Text>
-              <TextInput
-                control={control}
-                name="kw_price"
-                placeholder="Kilowat Price"
-                textColor={Colors.Black}
-                keyboardType="decimal-pad"
-              />
+              {isEditing ? (
+                <TextInput
+                  control={control}
+                  name="kw_price"
+                  placeholder="Kilowat Price"
+                  textColor={Colors.Black}
+                  keyboardType="decimal-pad"
+                />
+              ) : (
+                <Text style={styles.text}>{getValues().kw_price}</Text>
+              )}
             </View>
-            {/* <View style={styles.inputContainer}>
-              <Text style={styles.label}>Equipment:</Text>
-              <DropdownInput
-                control={control}
-                name="equipment"
-                placeholder="Equipment"
-                textColor={Colors.Black}
-                items={['Motor 1', 'Motor 2', 'Motor 3']}
-                disabled={!isEditing}
-              />
-            </View> */}
             <ScreenHeader>Timing on/off</ScreenHeader>
             {isEditing && (
               <ElevatedCard
@@ -89,25 +163,12 @@ const GeneratorOnOff = () => {
             {...props}
             field={field}
             disabled={!isEditing}
-            onDeletePress={() => {
-              let newArray: {
-                id: string;
-                time_to_turn_on: Date;
-                time_to_turn_off: Date;
-              }[] = [];
-
-              for (let i = 0; i < field.value.length; i++) {
-                if (i !== props.index) {
-                  newArray.push(props.item);
-                }
-              }
-
-              field.onChange(newArray);
-            }}
+            onDeletePress={() => handleDelete(props.index)} 
             isEditing={isEditing}
           />
         )}
       />
+
       <ElevatedCard
         onPress={() => {
           if (isEditing) {

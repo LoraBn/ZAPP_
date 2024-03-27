@@ -719,106 +719,69 @@ const deleteAnnouncement = async (req, res) => {
 const getKwhPrice = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const queryText =
-      "SELECT * FROM kwh_prices  WHERE owner_id = $1 RETURNING price_id";
-    const results = pool.query(queryText, [ownerId]);
-    res.status(200).json({ price: results[0] });
-  } catch (error) {}
-  console.error("Error fetching plans:", error);
-  res.status(500).json({ error_message: "Internal Server Error" });
-};
-
-const createPrice = async (req, res) => {
-  try {
-    const { kwh_price } = req.body;
-    const ownerId = req.user.userId;
-
-    // Check if a price already exists for the owner
-    const existingPriceQuery =
-      "SELECT COUNT(*) FROM kwh_prices WHERE owner_id = $1";
-    const existingPrice = await pool.query(existingPriceQuery, [ownerId]);
-
-    if (existingPrice.rows[0].count > 0) {
-      return res.status(400).json({
-        error_message: "Price already exists for this owner",
-      });
+    const queryText = "SELECT * FROM kwh_prices WHERE owner_id = $1";
+    const results = await pool.query(queryText, [ownerId]);
+    if (results.rows.length > 0) {
+      res.status(200).json({ price: results.rows[0] });
+    } else {
+      res.status(404).json({ error_message: "Kwh price not found" });
     }
-
-    // Insert new price
-    const insertPriceQuery =
-      "INSERT INTO kwh_prices (kwh_price, owner_id) VALUES ($1, $2) RETURNING price_id, date";
-    const newPrice = await pool.query(insertPriceQuery, [kwh_price, ownerId]);
-
-    // Emit notification to relevant room
-    let room = `all${ownerId}`;
-    req.app.get("io").to(room).emit("newPrice", {
-      price_id: newPrice.rows[0].price_id,
-      kwh_price,
-      date: newPrice.rows[0].date,
-    });
-
-    // Send response
-    res.status(201).json({
-      price_id: newPrice.rows[0].price_id,
-      message: "Price created successfully!",
-    });
   } catch (error) {
-    console.error("Error creating price:", error);
+    console.error("Error fetching kwh price:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
 
 const updatePrice = async (req, res) => {
   try {
-    const priceId = req.params.id;
     const ownerId = req.user.userId;
-    console.log("updating the price");
-
     const { kwh_price } = req.body;
 
-    // Check if the price exists
-    const priceExistsQuery =
-      "SELECT * FROM kwh_prices WHERE price_id = $1 AND owner_id = $2";
-    const priceExistsResult = await pool.query(priceExistsQuery, [
-      priceId,
-      ownerId,
-    ]);
+    // Check if the owner already has a price
+    const existingPriceQuery = "SELECT * FROM kwh_prices WHERE owner_id = $1";
+    const existingPriceResult = await pool.query(existingPriceQuery, [ownerId]);
 
-    if (priceExistsResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No price found with the provided ID" });
+    if (existingPriceResult.rows.length === 0) {
+      // Create a new price if the owner doesn't have one
+      const insertPriceQuery =
+        "INSERT INTO kwh_prices (kwh_price, owner_id) VALUES ($1, $2) RETURNING price_id";
+      const newPrice = await pool.query(insertPriceQuery, [kwh_price, ownerId]);
+
+      // Emit notification to relevant room
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("newPrice", {
+        price_id: newPrice.rows[0].price_id,
+        kwh_price,
+      });
+
+      // Send response
+      return res.status(201).json({
+        price_id: newPrice.rows[0].price_id,
+        message: "Price created successfully!",
+      });
     }
 
-    // Update the price
+    // Update the existing price if the owner already has one
     const updateQuery = {
       text: `
         UPDATE kwh_prices
         SET kwh_price = $1
-        WHERE price_id = $2 AND owner_id = $3
-        RETURNING *`,
-      values: [
-        kwh_price || priceExistsResult.rows[0].kwh_price,
-        priceId,
-        ownerId,
-      ],
+        WHERE owner_id = $2
+        RETURNING price_id`,
+      values: [kwh_price, ownerId],
     };
 
     const updateResult = await pool.query(updateQuery);
 
-    if (updateResult.rows.length > 0) {
-      let room = `all${ownerId}`;
-      req.app.get("io").to(room).emit("updatePrice", {
-        price_id: priceId,
-        kwh_price,
-      });
-      console.log("price sent to room", room);
-      res.status(200).json({ message: "Price updated successfully!" });
-    } else {
-      res
-        .status(404)
-        .json({ error_message: "No price found with the provided ID" });
-    }
+    // Emit notification to relevant room
+    let room = `all${ownerId}`;
+    req.app.get("io").to(room).emit("updatePrice", {
+      price_id: updateResult.rows[0].price_id,
+      kwh_price,
+    });
+
+    // Send response
+    res.status(200).json({ message: "Price updated successfully!" });
   } catch (error) {
     console.error("Error updating price:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
@@ -1014,7 +977,7 @@ const getElectricSchedule = async (req, res) => {
 const createElectricSchedule = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const { daily_schedule } = req.body;
+    const { schedule } = req.body;
 
     // Proceed with creating electric schedule
     const queryText = `
@@ -1022,7 +985,7 @@ const createElectricSchedule = async (req, res) => {
       VALUES($1, $2)
       RETURNING schedule_id`;
 
-    const result = await pool.query(queryText, [ownerId, daily_schedule]);
+    const result = await pool.query(queryText, [ownerId, schedule]);
 
     if (result.rows.length > 0) {
       res.status(201).json({
@@ -1043,41 +1006,41 @@ const createElectricSchedule = async (req, res) => {
 const updateElectricSchedule = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const scheduleId = req.params.id;
-    const { daily_schedule } = req.body;
+    const { schedule } = req.body;
 
     // Check if the electric schedule exists and is owned by the provided owner
     const scheduleExistsQuery =
-      "SELECT * FROM electric_schedules WHERE schedule_id = $1 AND owner_id = $2";
+      "SELECT * FROM electric_schedules WHERE owner_id = $1";
     const scheduleExistsResult = await pool.query(scheduleExistsQuery, [
-      scheduleId,
       ownerId,
     ]);
 
+    let updateQuery, updateResult;
+
     if (scheduleExistsResult.rows.length === 0) {
-      return res.status(404).json({
-        error_message: "No electric schedule found with the provided ID",
-      });
+      // If the schedule doesn't exist, create a new one
+      const createQuery = {
+        text: `
+          INSERT INTO electric_schedules (owner_id, schedule)
+          VALUES ($1, $2)
+          RETURNING schedule_id`,
+        values: [ownerId, schedule],
+      };
+
+      updateResult = await pool.query(createQuery);
+    } else {
+      // If the schedule exists, update its values
+      updateQuery = {
+        text: `
+          UPDATE electric_schedules
+          SET schedule = $1
+          WHERE owner_id = $2
+          RETURNING schedule_id`,
+        values: [schedule, ownerId],
+      };
+
+      updateResult = await pool.query(updateQuery);
     }
-
-    const existingSchedule = scheduleExistsResult.rows[0];
-
-    // Determine the values to update
-    const updatedValues = {
-      daily_schedule: daily_schedule || existingSchedule.daily_schedule,
-    };
-
-    // Update the electric schedule
-    const updateQuery = {
-      text: `
-        UPDATE electric_schedules
-        SET daily_schedule = $1
-        WHERE schedule_id = $2 AND owner_id = $3
-        RETURNING schedule_id`,
-      values: [updatedValues.daily_schedule, scheduleId, ownerId],
-    };
-
-    const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
       res.status(200).json({
@@ -2277,7 +2240,6 @@ module.exports = {
   createAnnouncement,
   deleteAnnouncement,
   getKwhPrice,
-  createPrice,
   updatePrice,
   deletePrice,
   getPlans,

@@ -86,7 +86,7 @@ useEffect(()=>{
         style={[styles.historyContainer, {marginBottom: insets.bottom + 25}]}>
         <View style={styles.whiteCardStyle}>
           <FlatList
-            data={equipments}
+            data={equipments.length? equipments : [{ name: "No equipment"}]}
             ItemSeparatorComponent={ListSeperator}
             renderItem={props => <EquipmentEditableItem {...props} />}
           />
