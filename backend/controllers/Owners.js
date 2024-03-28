@@ -278,17 +278,17 @@ const createCustomerAccount = async (req, res) => {
     const {
       name,
       lastName,
-      userName,
+      username,
       password,
       address,
       planName,
-      equipementName,
+      equipmentName,
     } = req.body;
 
     // Check if the username already exists
     const userExists = await pool.query(
       "SELECT * FROM customers WHERE username = $1",
-      [userName]
+      [username]
     );
 
     if (userExists.rows.length > 0) {
@@ -297,52 +297,52 @@ const createCustomerAccount = async (req, res) => {
         .json({ error_message: "Username is already taken" });
     }
 
+
     const ownerId = req.user.userId;
-    const equipementResult = await pool.query(
-      "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2 RETURNING equipement_id",
-      [ownerId, equipementName]
+    const equipmentResult = await pool.query(
+      "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2",
+      [ownerId, equipmentName]
     );
     const planResult = await pool.query(
-      "SELECT * FROM plans_prices WHERE plan_name = $1 RETURNING plan_id",
+      "SELECT * FROM plans_prices WHERE plan_name = $1",
       [planName]
     );
 
-    const equipementId = equipementResult.rows[0].equipement_id;
+    if (planResult.rows.length === 0) {
+      return res.status(405).json({ error_message: "Plan not found" });
+    }
+
+    const equipmentId = equipmentResult.rows[0].equipment_id;
     const planId = planResult.rows[0].plan_id;
 
     const hashedPass = await bcrypt.hash(password, 10);
 
     const queryText = `
-      INSERT INTO customers(owner_id, name, last_name, username, password_hash, address, plan_id, equipement_id)
+      INSERT INTO customers(owner_id, name, last_name, username, password_hash, address, plan_id, equipment_id) 
       VALUES($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING customer_id`;
 
-    pool.query(
+    const result = await pool.query(
       queryText,
       [
         ownerId,
         name,
         lastName,
-        userName,
+        username,
         hashedPass,
         address,
         planId,
-        equipementId,
-      ],
-      async (err, result) => {
-        if (err) {
-          console.error("Error creating customer account:", err);
-          res.status(500).json({ error_message: "Internal Server Error" });
-        } else {
-          res.status(201).json({ user_info: { userName, password } });
-        }
-      }
+        equipmentId,
+      ]
     );
+
+    res.status(201).json({ user_info: { username, password } });
   } catch (error) {
     console.error("Error during customer account creation:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const updateCustomerAccount = async (req, res) => {
   try {
@@ -351,11 +351,11 @@ const updateCustomerAccount = async (req, res) => {
     const {
       name,
       lastName,
-      userName,
+      username,
       password,
       address,
       planName,
-      equipementName,
+      equipmentName,
     } = req.body;
 
     // Check if the customer exists
@@ -379,7 +379,7 @@ const updateCustomerAccount = async (req, res) => {
     const updatedValues = {
       name: name || existingCustomer.name,
       last_name: lastName || existingCustomer.last_name,
-      username: userName || existingCustomer.username,
+      username: username || existingCustomer.username,
       password_hash: password
         ? await bcrypt.hash(password, 10)
         : existingCustomer.password_hash,
@@ -392,11 +392,11 @@ const updateCustomerAccount = async (req, res) => {
             )
           ).rows[0].plan_id
         : existingCustomer.plan_id,
-      equipement_id: equipementName
+      equipement_id: equipmentName
         ? (
             await pool.query(
               "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2 RETURNING equipement_id",
-              [ownerId, equipementName]
+              [ownerId, equipmentName]
             )
           ).rows[0].equipement_id
         : existingCustomer.equipement_id,

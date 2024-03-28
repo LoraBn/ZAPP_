@@ -61,126 +61,6 @@ export const DUMMY_ASSIGNMENTS_2: Assignment[] = [
   {id: 8, date: new Date(), status: 'Done', title: 'Testing One'},
 ];
 
-export const DUMMY_PAYMENTS: Payment[] = [
-  {
-    id: 1,
-    date: new Date('2024-01-24'),
-    status: 'To be Paid',
-    total: 200,
-  },
-  {
-    id: 2,
-    date: new Date('2024-01-24'),
-    status: 'Pending',
-    total: 100,
-  },
-  {
-    id: 3,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 4,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 5,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-];
-export const DUMMY_PAYMENTS_2: Payment[] = [
-  {
-    id: 10,
-    date: new Date('2024-01-24'),
-    status: 'To be Paid',
-    total: 200,
-  },
-  {
-    id: 11,
-    date: new Date('2024-01-24'),
-    status: 'Pending',
-    total: 100,
-  },
-  {
-    id: 12,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 13,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 14,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-];
-
-export const DUMMY_DATA: any[] = [
-  [
-    {
-      amount: 12123,
-      description: 'fafa',
-      employee_id: 1,
-      expense_date: '2024-03-26T18:31:39.707Z',
-      expense_id: 30,
-      owner_id: 1,
-    },
-    {
-      amount: 2011,
-      description: 'Salary',
-      employee_id: 1,
-      expense_date: '2024-03-26T18:59:38.399Z',
-      expense_id: 33,
-      owner_id: 1,
-    },
-    {
-      amount: 211,
-      description: 'ÅÄÅÄÄ',
-      employee_id: 1,
-      expense_date: '2024-03-28T18:38:21.388Z',
-      expense_id: 35,
-      owner_id: 1,
-    },
-    {
-      amount: 2245,
-      description: 'Ttgg',
-      employee_id: 1,
-      expense_date: '2024-03-28T18:38:31.608Z',
-      expense_id: 36,
-      owner_id: 1,
-    },
-  ],
-  [
-    {
-      amount: 22,
-      description: 'Tggg',
-      employee_id: 1,
-      expense_date: '2024-03-28T18:38:40.958Z',
-      expense_id: 37,
-      owner_id: 1,
-    },
-    {
-      amount: 2222,
-      description: 'Ffff',
-      employee_id: 1,
-      expense_date: '2024-03-28T18:38:50.545Z',
-      expense_id: 38,
-      owner_id: 1,
-    },
-  ],
-];
-
 const EmployeeDetailsScreen = ({
   navigation,
   route: {params},
@@ -191,10 +71,15 @@ const EmployeeDetailsScreen = ({
 
   const insets = useSafeAreaInsets();
 
-  const scrollOffsetX = useSharedValue(0);
+  const assignmentScrollOffsetX = useSharedValue(0);
+  const expensesScrollOffsetX = useSharedValue(0);
 
-  const onScroll = useAnimatedScrollHandler(({contentOffset}) => {
-    scrollOffsetX.value = contentOffset.x / (width - 61);
+  const assignmentOnScroll = useAnimatedScrollHandler(({contentOffset}) => {
+    assignmentScrollOffsetX.value = contentOffset.x / (width - 61);
+  });
+
+  const expensesOnScroll = useAnimatedScrollHandler(({contentOffset}) => {
+    expensesScrollOffsetX.value = contentOffset.x / (width - 61);
   });
 
   const [expenses, setExpenses] = useState<any>([]);
@@ -284,7 +169,7 @@ const EmployeeDetailsScreen = ({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             style={styles.containerFlatListStyle}
-            onScroll={onScroll}
+            onScroll={assignmentOnScroll}
             renderItem={({item}) => {
               return (
                 <View style={styles.flatlistArrayContainer}>
@@ -297,7 +182,7 @@ const EmployeeDetailsScreen = ({
           />
           <CarouselIndicators
             items={[DUMMY_ASSIGNMENTS, DUMMY_ASSIGNMENTS_2]}
-            animatedIndex={scrollOffsetX}
+            animatedIndex={assignmentScrollOffsetX}
           />
         </View>
         <View style={styles.flatlistContainer}>
@@ -310,7 +195,7 @@ const EmployeeDetailsScreen = ({
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             style={styles.containerFlatListStyle}
-            onScroll={onScroll}
+            onScroll={expensesOnScroll}
             renderItem={({item}) => {
               return (
                 <View style={styles.flatlistArrayContainer}>
@@ -321,7 +206,10 @@ const EmployeeDetailsScreen = ({
               );
             }}
           />
-          <CarouselIndicators items={expenses} animatedIndex={scrollOffsetX} />
+          <CarouselIndicators
+            items={expenses}
+            animatedIndex={expensesScrollOffsetX}
+          />
         </View>
       </ScrollView>
     </View>

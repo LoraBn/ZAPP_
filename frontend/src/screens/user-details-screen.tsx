@@ -164,15 +164,15 @@ const UserDetailsScreen = ({
         ]}>
         <View style={styles.topTextContainer}>
           <Text style={styles.nameText}>
-            {user.name} <Text style={styles.idText}>#{user.id}</Text>
+            {user.username} <Text style={styles.idText}>#{user.customer_id}</Text>
           </Text>
           <Text style={styles.dateJoinedText}>
-            Date Joined - {formatDate(user.date_joined)}
+            Date Joined - {formatDate(user.created_at)}
           </Text>
         </View>
         <View style={styles.accountsUserNameContainer}>
           {/* Change these from API and the user */}
-          <Text style={styles.text}>{user.name}</Text>
+          <Text style={styles.text}>{user.name} {user.last_name}</Text>
         </View>
         <ScreenHeader>
           <ElevatedCard

@@ -20,31 +20,28 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {HomeStackNavigatorParams} from '../navigation/home-stack-navigation';
 import EquipmentItem from '../components/ui/equipment-item';
 import client from '../API/client';
-import { io } from 'socket.io-client';
+import {io} from 'socket.io-client';
 import AnnouncementItem from '../components/alerts/announcement-item';
-import { useUser } from '../storage/use-user';
-import { ioString } from '../API/io';
+import {useUser} from '../storage/use-user';
+import {ioString} from '../API/io';
 
 export const DUMMY_ALERTS = [
   {
     id: 1,
     user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
     date: new Date(),
   },
   {
     id: 2,
     user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
     date: new Date(),
   },
   {
     id: 3,
     user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
     date: new Date(),
   },
 ];
@@ -121,40 +118,62 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     {value: 5, label: 'E', frontColor: '#9272b1'},
   ];
 
+  //Equipments
+  
+  const fetchEquipments = async () => {
+    try {
+      const response = await client.get(`/${type}/equipments`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setEquipments(response.data.equipments.reverse());
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
 
-//Equipments
-const [equipments, setEquipments] = useState<any[]>([]);
-const fetchEquipments = async () => {
-  try {
-    const response = await client.get(`/${type}/equipments`, {
-      headers: {
-        authorization: `Bearer ${accessToken}`, // Replace with your actual token
-      },
-    });
-    setEquipments(response.data.equipments.reverse());
-  } catch (error) {
-    console.error('Error fetching announcements:', error);
-  }
-}
-
-//Announcements
-const [announcements, setAnnouncements] = useState<any[]>([]);
+  //Announcements
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
-   const {setSocket, socket, accessToken,type,setEmployees,employees} = useUser(
-    state => state,
-  );
+  const {
+    setSocket,
+    socket,
+    accessToken,
+    type,
+    setEmployees,
+    employees,
+    setPlans,
+    setEquipments,
+    equipments,
+  } = useUser(state => state);
 
   useEffect(() => {
     fetchAnnouncements();
     fetchEquipments();
     establishWebSocketConnection();
-    fetchEmployees()
+    fetchEmployees();
+    fetchPlans();
     return () => {
       if (socket != null) {
         socket.disconnect();
       }
     };
   }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const responce = await client(`/${type}/plans`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      // const PlansArray = responce.data.plans.map((plan: any) => plan.plan_name);
+      setPlans(responce.data.plans);
+    } catch (error: any) {
+      console.log(error);
+    }
+  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -173,40 +192,42 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
     try {
       const response = await client.get(`/${type}/employees`, {
         headers: {
-          authorization: `Bearer ${accessToken}`
-        }
+          authorization: `Bearer ${accessToken}`,
+        },
       });
-      const employeesArray = response.data.employees.map((employee: any) => employee.username);
+      const employeesArray = response.data.employees.map(
+        (employee: any) => employee.username,
+      );
       setEmployees(employeesArray);
-    } catch (error:any) {
+    } catch (error: any) {
       console.log(error.message);
     }
   };
 
   const establishWebSocketConnection = () => {
     const newSocket = io(ioString);
-    setSocket(newSocket)
+    setSocket(newSocket);
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
-      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+      setAnnouncements(prevAnnouncements => [...prevAnnouncements, data]);
     });
-    newSocket.on('newEquipment', (data: any)=> {
-      console.log("New equipmenet added:",data);
-      setEquipments((prevEquipments) => [data, ...prevEquipments])
+    newSocket.on('newEquipment', (data: any) => {
+      console.log('New equipmenet added:', data);
+      setEquipments(prevEquipments => [data, ...prevEquipments]);
     });
-    newSocket.on('updateEquipment', (data:any)=> {
-      console.log("Im here");
-      const {oldName,name, price, description, status} = data;
+    newSocket.on('updateEquipment', (data: any) => {
+      console.log('Im here');
+      const {oldName, name, price, description, status} = data;
       const newEq = {name, price, description, status};
-      setEquipments((prevEquipments)=> {
-        const filtered = prevEquipments.filter((item)=> item.name != oldName);
-        return [newEq, ...filtered]
-      })
+      setEquipments(prevEquipments => {
+        const filtered = prevEquipments.filter(item => item.name != oldName);
+        return [newEq, ...filtered];
+      });
     });
-    newSocket.on('deleteEquipment', (data:any)=> {
-      const {deletedName} = data; 
-      setEquipments((prevEquipments)=>{
-        return prevEquipments.filter((item)=> item.name !== deletedName)
+    newSocket.on('deleteEquipment', (data: any) => {
+      const {deletedName} = data;
+      setEquipments(prevEquipments => {
+        return prevEquipments.filter(item => item.name !== deletedName);
       })
     });
   };
@@ -256,7 +277,11 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={equipments.length? equipments.slice(0,3) : [{ name: "No equipment"}]}
+              data={
+                equipments.length
+                  ? equipments.slice(0, 3)
+                  : [{name: 'No equipment'}]
+              }
               scrollEnabled={false}
               renderItem={EquipmentItem}
               ListFooterComponent={() =>
@@ -319,7 +344,7 @@ const [announcements, setAnnouncements] = useState<any[]>([]);
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={announcements.slice(0,3)}
+              data={announcements.slice(0, 3)}
               scrollEnabled={false}
               renderItem={AnnouncementItem}
               ListFooterComponent={() =>

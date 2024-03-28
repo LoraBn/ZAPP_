@@ -17,9 +17,9 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 
 - **Get customers list** GET: /api/owner/customers {customers} : {error_message}
 
-- **Create customer account** POST: /api/owner/customers {name, lastName, userName, password, address, planName, equipementName} => { user_info: { userName, password } } : {error_message}
+- **Create customer account** POST: /api/owner/customers {name, lastName, username, password, address, planName, equipmentName} => { user_info: { userName, password } } : {error_message}
 
-- **Update customer account** PUT: /api/owner/customers/:username { name, lastName, userName, password, address, planName, equipementName,} => {message, user_info} : {error_message}
+- **Update customer account** PUT: /api/owner/customers/:username { name, lastName, username, password, address, planName, equipementName,} => {message, user_info} : {error_message}
 
 - **Delete customer account** DELETE: /api/owner/customers/:username => {message} : {error_message}
 

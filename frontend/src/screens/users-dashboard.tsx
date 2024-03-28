@@ -24,8 +24,10 @@ export const USERS_FILTERS = ['Done', 'Not Done', 'Pending'];
 export const EMPLOYEE_FILTERS = ['Paid', 'Not Paid'];
 
 export interface User {
-  id: number;
+  customer_id: number;
   name: string;
+  last_name: string;
+  username: string;
   amount_to_pay: number;
   paid: number;
   due_date: Date;
