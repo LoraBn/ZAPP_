@@ -12,9 +12,9 @@ type PaymentItemProps = {
 const PaymentItem = ({item}: PaymentItemProps) => {
   return (
     <View style={[styles.container]}>
-      <Text style={styles.text}>$ {item.total}</Text>
-      <Text style={styles.text}>{formatDate(item.date)}</Text>
-      <Text style={styles.text}>{item.status}</Text>
+      <Text style={styles.text}>$ {item.amount}</Text>
+      <Text style={styles.text}>{formatDate(item.expense_date)}</Text>
+      <Text style={styles.text}>Paid</Text>
     </View>
   );
 };

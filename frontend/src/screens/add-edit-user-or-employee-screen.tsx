@@ -27,21 +27,15 @@ type AddUserOrEmployeeForm = {
   password: string;
   type: 'Customer' | 'Employee';
   plan: '10Amp' | '20Amp' | '5Amp' | '2Amp' | null;
-  payment: 'Fixed' | 'Not Fixed';
   address: string;
   date: Date;
   salary: string;
-  role: string;
   equipment: string;
 };
 
 const USER_TYPES = ['Customer', 'Employee'];
 
 const PLANS = ['10Amp', '5Amp', '2Amp', '20Amp'];
-
-const PAYMENTS = ['Fixed', 'Not Fixed'];
-
-const ROLES = ['admin', 'normal'];
 
 type AddEditUserOrEmployeeScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -67,11 +61,9 @@ const AddEditUserOrEmployeeScreen = ({
       address: params.employee?.address || params.user?.address,
       date: new Date(),
       name: params?.employee?.name || params.user?.name || '',
-      payment: params.user?.payment_type ?? 'Fixed',
       plan: params.user?.plan,
       type: params?.employee ? 'Employee' : 'Customer',
       salary: params.employee?.salary ? params.employee.salary?.toString() : '',
-      role: params.employee?.role ?? '',
     },
   });
 
@@ -81,13 +73,14 @@ const AddEditUserOrEmployeeScreen = ({
     address,
     date,
     name,
-    payment,
     plan,
     type,
+    username,
+    password,
   }: AddUserOrEmployeeForm) {
     //HERE
 
-    console.log(address, date, name, payment, plan, type);
+    console.log(address, date, name, plan, type, username, password);
 
     Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
       {text: 'Cancel'},
@@ -174,13 +167,6 @@ const AddEditUserOrEmployeeScreen = ({
               placeholder="Plan"
               items={PLANS}
             />
-            <DropdownInput
-              style={styles.z200}
-              control={control}
-              name="payment"
-              placeholder="Payment"
-              items={PAYMENTS}
-            />
           </View>
           <View style={styles.fullNameTextInputContainer}>
             <Text style={styles.label}>Equipment:</Text>
@@ -202,15 +188,6 @@ const AddEditUserOrEmployeeScreen = ({
               name="salary"
               placeholder="Salary"
               keyboardType="decimal-pad"
-            />
-          </View>
-          <View style={styles.fullNameTextInputContainer}>
-            <Text style={styles.label}>Role:</Text>
-            <DropdownInput
-              control={control}
-              name="role"
-              placeholder="Role"
-              items={ROLES}
             />
           </View>
         </>

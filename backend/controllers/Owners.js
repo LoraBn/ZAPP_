@@ -1331,6 +1331,26 @@ const getExpenses = async (req, res) => {
   }
 };
 
+const getExpensesOfEmp = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const employeeId = req.params.id;
+
+    const queryText = `SELECT * FROM expenses WHERE employee_id = $1 AND owner_id = $2 ORDER BY expense_date DESC`;
+
+    const expenseResults = await pool.query(queryText, [employeeId, ownerId]);
+
+    if (expenseResults.rowCount) {
+      res.status(200).json({ expenses: expenseResults.rows });
+    } else {
+      res.sendStatus(405).json({ expenses: "No Expenses Found" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
 const createExpense = async (req, res) => {
   try {
     const { username, description, amount } = req.body;
@@ -2256,6 +2276,7 @@ module.exports = {
   updateBill,
   deleteBill,
   getExpenses,
+  getExpensesOfEmp,
   createExpense,
   updateExpense,
   deleteExpense,

@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Card from '../components/ui/card';
@@ -18,6 +18,7 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {UsersStackNavigationParams} from '../navigation/users-stack-navigation';
 import ScreenHeader from '../components/ui/screen-header';
 import {useUser} from '../storage/use-user';
+import client from '../API/client';
 
 export const USERS_FILTERS = ['Done', 'Not Done', 'Pending'];
 export const EMPLOYEE_FILTERS = ['Paid', 'Not Paid'];
@@ -33,20 +34,21 @@ export interface User {
   plan: '10Amp' | '5Amp' | '2Amp' | '20Amp';
   payment_type: 'Fixed' | 'Not Fixed';
   profile_picture: string | null;
-  date_joined: Date;
+  created_at: Date;
   phone_number: number;
 }
 
 export interface Employee {
-  id: number;
+  employee_id: number;
   name: string;
+  username: string;
   permissions: string[];
   address: string;
   remark: string;
   salary: number;
   profile_picture: string | null;
   role: string;
-  date_joined: Date;
+  created_at: Date;
 }
 
 export const DUMMY_USERS: User[] = [
@@ -80,30 +82,30 @@ export const DUMMY_USERS: User[] = [
   },
 ];
 
-export const DUMMY_EMPLOYEES: Employee[] = [
-  {
-    id: 1,
-    address: 'Home',
-    name: 'Greeter',
-    permissions: ['admin', 'user', 'owner'],
-    remark: 'Dummy fetch this from api',
-    salary: 1000,
-    profile_picture: null,
-    role: 'admin',
-    date_joined: new Date(),
-  },
-  {
-    id: 2,
-    address: 'Office',
-    name: 'Greetings',
-    permissions: ['owner'],
-    remark: 'Dummy fetch this from api',
-    salary: 2000,
-    profile_picture: null,
-    role: 'normal',
-    date_joined: new Date(),
-  },
-];
+// export const DUMMY_EMPLOYEES: Employee[] = [
+//   {
+//     id: 1,
+//     address: 'Home',
+//     name: 'Greeter',
+//     permissions: ['admin', 'user', 'owner'],
+//     remark: 'Dummy fetch this from api',
+//     salary: 1000,
+//     profile_picture: null,
+//     role: 'admin',
+//     date_joined: new Date(),
+//   },
+//   {
+//     id: 2,
+//     address: 'Office',
+//     name: 'Greetings',
+//     permissions: ['owner'],
+//     remark: 'Dummy fetch this from api',
+//     salary: 2000,
+//     profile_picture: null,
+//     role: 'normal',
+//     date_joined: new Date(),
+//   },
+// ];
 
 type UsersDashboardProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -114,12 +116,38 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
   const insets = useSafeAreaInsets();
 
   const userType = useUser(state => state.type);
+  const {accessToken} = useUser(state => state);
 
-  const [usersType, setUsersType] = useState<'users' | 'employees'>('users');
+  const [usersType, setUsersType] = useState<'customers' | 'employees'>(
+    'customers',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<string[]>([]);
   const [employeeFilters, setEmployeeFilters] = useState<string[]>([]);
   const [isBilling, setIsBilling] = useState(false);
+
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  // Fetch data when the component mounts or filters change
+
+  const fetchUsers = async () => {
+    console.log(usersType);
+    const responce = await client.get(`/${userType}/${usersType}`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (usersType == 'customers') {
+      setCustomers(responce.data.customers);
+    } else if (usersType == 'employees') {
+      setEmployees(responce.data.employees);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [usersType]);
 
   return (
     <View
@@ -145,7 +173,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
         </Pressable>
         <View style={[styles.topTextContainer, {paddingTop: insets.top + 15}]}>
           <ScreenHeader>
-            {usersType === 'users' ? 'Users' : 'Employees'}
+            {usersType === 'customers' ? 'Customers' : 'Employees'}
           </ScreenHeader>
         </View>
         <View style={styles.empUsersContainer}>
@@ -158,15 +186,15 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
             </Card>
           )}
           <Card
-            onPress={() => setUsersType('users')}
+            onPress={() => setUsersType('customers')}
             style={styles.cardContainer}
-            selected={usersType === 'users'}>
-            <Text style={styles.text}>Users</Text>
+            selected={usersType === 'customers'}>
+            <Text style={styles.text}>Customers</Text>
           </Card>
         </View>
         <SearchTextInput value={searchQuery} setValue={setSearchQuery} />
         <View style={styles.h10} />
-        {usersType === 'users' ? (
+        {usersType === 'customers' ? (
           <View style={styles.filtersContainer}>
             {USERS_FILTERS.map(item => (
               <Card
@@ -218,7 +246,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       <View style={styles.h10} />
       <FlatList
         contentContainerStyle={styles.topItemsContainer}
-        data={usersType === 'users' ? DUMMY_USERS : (DUMMY_EMPLOYEES as any)}
+        data={usersType === 'customers' ? customers : employees}
         renderItem={props => {
           if (usersType === 'employees') {
             return <EmployeeListItem {...props} />;

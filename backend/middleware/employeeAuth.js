@@ -16,14 +16,11 @@ const authenticateEmployeeToken = async (req, res, next) => {
       return res.sendStatus(403); // Forbidden
     }
 
-    console.log('Received token:', token);
-
     const user = await jwt.verify(token, process.env.EMPLOYEE_ACCESS_TOKEN);
     
     const isEmployee = await pool.query('SELECT * FROM employees WHERE employee_id = $1 AND username=$2', [user.userId, user.username]);
     
     if (isEmployee.rows.length){
-      console.log(user)
       req.user = user;
       next();
     }

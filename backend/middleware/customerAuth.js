@@ -17,7 +17,6 @@ const authenticateCustomerToken = async (req, res, next) => {
     const isCustomer = await pool.query('SELECT * FROM customers WHERE customer_id = $1 AND username=$2', [user.userId, user.username]);
     
     if (isCustomer.rows.length){
-      console.log(user)
       req.user = user;
       next();
     }

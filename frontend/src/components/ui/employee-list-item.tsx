@@ -24,7 +24,7 @@ const EmployeeListItem = ({item}: EmployeeListItemProps) => {
       onPress={() =>
         navigation.navigate('EmployeeDetailsScreen', {employee: item})
       }>
-      <Text style={styles.text}>{item.name}</Text>
+      <Text style={styles.text}>{item.username}</Text>
       <View style={styles.permContainer}>
         <Text style={styles.detailText}>{`$ ${item.salary}`}</Text>
       </View>

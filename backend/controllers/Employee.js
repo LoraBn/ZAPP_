@@ -661,6 +661,27 @@ const getElectricScheduleEmp = async (req, res) => {
   }
 };
 
+const getEmployeeExpenses = async (req, res) => {
+  try {
+    const employeeId = req.user.userId;
+
+    const queryText = `SELECT * FROM expenses WHERE employee_id = $1 ORDER BY expense_date`;
+
+    const expenseResults = await pool.query(queryText,[employeeId]);
+
+    if(expenseResults.rows){
+      res.status(200).json({ expenses: expenseResults.rows});
+    }else{
+      res.sendStatus(404).json({expenses: "No Expenses Found"});
+    }
+
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({error_message: "Internal Server Error"})
+  }
+}
+
 module.exports = {
   updateProfile,
   getCustomerListEmployee,
@@ -679,4 +700,5 @@ module.exports = {
   getAnnouncementsEmp,
   getElectricScheduleEmp,
   getKwhPriceEmp,
+  getEmployeeExpenses,
 };

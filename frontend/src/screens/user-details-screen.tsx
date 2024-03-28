@@ -33,10 +33,10 @@ type UserDetailsScreenProps = StackScreenProps<
 >;
 
 export type Payment = {
-  id: number;
-  date: Date;
+  expense_id: number;
+  expense_date: Date;
   status: 'To be Paid' | 'Paid' | 'Pending';
-  total: number;
+  amount: number;
 };
 
 export const DUMMY_PAYMENTS: Payment[] = [

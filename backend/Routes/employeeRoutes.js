@@ -18,6 +18,7 @@ const {
   getAnnouncementsEmp,
   getElectricScheduleEmp,
   getKwhPriceEmp,
+  getEmployeeExpenses,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -97,6 +98,9 @@ module.exports = function (io) {
     authenticateEmployeeToken,
     getElectricScheduleEmp
   );
+
+  //Expenses
+  router.get('/expenses', authenticateEmployeeToken, getEmployeeExpenses)
 
   return router;
 };

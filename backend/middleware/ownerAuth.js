@@ -18,7 +18,6 @@ const authenticateOwnerToken = async (req, res, next) => {
     const isOwner = await pool.query('SELECT * FROM owners WHERE owner_id = $1 AND username=$2', [user.userId, user.username]);
     
     if (isOwner.rows.length){
-      console.log(user)
       req.user = user;
       next();
     }

@@ -57,6 +57,7 @@ const {
   getKwhPrice,
   updatePrice,
   deletePrice,
+  getExpensesOfEmp,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -160,6 +161,9 @@ module.exports = function (io) {
 
   //expenses
   router.get("/expenses", authenticateOwnerToken, getExpenses);
+
+  //id is employeeId
+  router.get("/expenses/:id", authenticateOwnerToken, getExpensesOfEmp)
   router.post("/expenses", authenticateOwnerToken, createExpense);
   router.put("/expenses/:id", authenticateOwnerToken, updateExpense);
   router.delete("/expenses/:id", authenticateOwnerToken, deleteExpense);

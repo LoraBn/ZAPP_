@@ -52,6 +52,7 @@ const Expenses = ({}: ExpensesProps) => {
         setExpenses(prevExpenses => [data, ...prevExpenses]);
       });
       socket.on('updateExpense', (data: any) => {
+        console.log('updating')
         const {oldId, expense_id ,username, amount, description, expense_date} = data;
         const newExpense = {expense_id,username, amount, description, expense_date};
         setExpenses(prevExpenses => {

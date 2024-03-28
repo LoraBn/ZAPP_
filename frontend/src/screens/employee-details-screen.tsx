@@ -1,4 +1,5 @@
 import {
+  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -8,7 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ImageStrings} from '../assets/image-strings';
@@ -24,6 +25,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import CarouselIndicators from '../components/ui/carousel-indicators';
 import AssignmentItem from '../components/ui/assignment-item';
+import client from '../API/client';
+import {useUser} from '../storage/use-user';
 
 type EmployeeDetailsScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -31,10 +34,10 @@ type EmployeeDetailsScreenProps = StackScreenProps<
 >;
 
 export type Payment = {
-  id: number;
-  date: Date;
+  expense_id: number;
+  expense_date: Date;
   status: 'To be Paid' | 'Paid' | 'Pending';
-  total: number;
+  amount: number;
 };
 
 export type Assignment = {
@@ -123,6 +126,61 @@ export const DUMMY_PAYMENTS_2: Payment[] = [
   },
 ];
 
+export const DUMMY_DATA: any[] = [
+  [
+    {
+      amount: 12123,
+      description: 'fafa',
+      employee_id: 1,
+      expense_date: '2024-03-26T18:31:39.707Z',
+      expense_id: 30,
+      owner_id: 1,
+    },
+    {
+      amount: 2011,
+      description: 'Salary',
+      employee_id: 1,
+      expense_date: '2024-03-26T18:59:38.399Z',
+      expense_id: 33,
+      owner_id: 1,
+    },
+    {
+      amount: 211,
+      description: 'ÅÄÅÄÄ',
+      employee_id: 1,
+      expense_date: '2024-03-28T18:38:21.388Z',
+      expense_id: 35,
+      owner_id: 1,
+    },
+    {
+      amount: 2245,
+      description: 'Ttgg',
+      employee_id: 1,
+      expense_date: '2024-03-28T18:38:31.608Z',
+      expense_id: 36,
+      owner_id: 1,
+    },
+  ],
+  [
+    {
+      amount: 22,
+      description: 'Tggg',
+      employee_id: 1,
+      expense_date: '2024-03-28T18:38:40.958Z',
+      expense_id: 37,
+      owner_id: 1,
+    },
+    {
+      amount: 2222,
+      description: 'Ffff',
+      employee_id: 1,
+      expense_date: '2024-03-28T18:38:50.545Z',
+      expense_id: 38,
+      owner_id: 1,
+    },
+  ],
+];
+
 const EmployeeDetailsScreen = ({
   navigation,
   route: {params},
@@ -138,6 +196,45 @@ const EmployeeDetailsScreen = ({
   const onScroll = useAnimatedScrollHandler(({contentOffset}) => {
     scrollOffsetX.value = contentOffset.x / (width - 61);
   });
+
+  const [expenses, setExpenses] = useState<any>([]);
+  const {accessToken, type, socket} = useUser(state => state);
+
+  const fetchExpenses = async () => {
+    try {
+      console.log(`/${type}/expenses/${employee.employee_id}`);
+      const response = await client.get(
+        `/${type}/expenses/${employee.employee_id}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      if (response.data) {
+        const expenses = response.data.expenses;
+        // Split expenses into chunks of 4 objects each
+        const chunkedExpenses = chunkArray(expenses, 4);
+        setExpenses(chunkedExpenses);
+      }
+    } catch (error: any) {
+      console.log(error);
+      Alert.alert(error.message);
+    }
+  };
+
+  // Function to split array into chunks
+  const chunkArray = (arr: any[], chunkSize: number) => {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+      chunks.push(arr.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
 
   return (
     <View style={[styles.screen, {paddingTop: insets.top}]}>
@@ -160,10 +257,11 @@ const EmployeeDetailsScreen = ({
         ]}>
         <View style={styles.topTextContainer}>
           <Text style={styles.nameText}>
-            {employee.name} <Text style={styles.idText}>#{employee.id}</Text>
+            {employee.username}{' '}
+            <Text style={styles.idText}>#{employee.employee_id}</Text>
           </Text>
           <Text style={styles.dateJoinedText}>
-            Date Joined - {formatDate(employee.date_joined)}
+            Date Joined - {formatDate(employee.created_at)}
           </Text>
         </View>
         <View style={styles.accountsUserNameContainer}>
@@ -198,21 +296,17 @@ const EmployeeDetailsScreen = ({
             }}
           />
           <CarouselIndicators
-            items={[DUMMY_PAYMENTS, DUMMY_PAYMENTS_2]}
+            items={[DUMMY_ASSIGNMENTS, DUMMY_ASSIGNMENTS_2]}
             animatedIndex={scrollOffsetX}
           />
         </View>
-        <Card>
-          <Text style={styles.text}>Address:</Text>
-          <Text style={styles.text}>{employee.address}</Text>
-        </Card>
         <View style={styles.flatlistContainer}>
           <View style={styles.flatlistTextPadding}>
             <Text style={styles.bigTitle}>Salary Payments</Text>
           </View>
           <Animated.FlatList
             horizontal
-            data={[DUMMY_PAYMENTS, DUMMY_PAYMENTS_2]}
+            data={expenses}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             style={styles.containerFlatListStyle}
@@ -220,17 +314,14 @@ const EmployeeDetailsScreen = ({
             renderItem={({item}) => {
               return (
                 <View style={styles.flatlistArrayContainer}>
-                  {item.map((it, idx) => (
-                    <PaymentItem key={it.id} item={it} index={idx} />
+                  {item.map((it: Payment, idx: number) => (
+                    <PaymentItem key={it.expense_id} item={it} index={idx} />
                   ))}
                 </View>
               );
             }}
           />
-          <CarouselIndicators
-            items={[DUMMY_PAYMENTS, DUMMY_PAYMENTS_2]}
-            animatedIndex={scrollOffsetX}
-          />
+          <CarouselIndicators items={expenses} animatedIndex={scrollOffsetX} />
         </View>
       </ScrollView>
     </View>

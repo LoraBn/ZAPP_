@@ -23,40 +23,54 @@ export type EquipmentForm = {
 };
 
 const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
-  const {control, handleSubmit} = useForm<EquipmentForm>({
+  const {control, handleSubmit, setValue} = useForm<EquipmentForm>({
     defaultValues: {
-      username: "",
+      username: '',
     },
   });
 
-  const {setSocket, socket, accessToken, type,employees} = useUser(state => state);
+  const {setSocket, socket, accessToken, type, employees} = useUser(
+    state => state,
+  );
 
   const [isEditing, setIsEditing] = useState(false);
 
-  async function deleteItem(item:any){
+  useEffect(() => {
+    if (!isEditing) {
+      // Reset form values when exiting edit mode
+      setValue('username', item.username);
+      setValue('amount', item.amount.toString());
+      setValue('description', item.description);
+    }
+  }, [isEditing]);
+
+  async function deleteItem(item: any) {
     try {
-      const responce = await client.delete(`/${type}/expenses/${encodeURIComponent(item.expense_id)}`,{
-        headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
+      const responce = await client.delete(
+        `/${type}/expenses/${encodeURIComponent(item.expense_id)}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
       console.log(responce.data.message);
-      Alert.alert(responce.data.message)
+      Alert.alert(responce.data.message);
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
   async function onSubmit(data: EquipmentForm) {
     // Convert amount to integer
     data.amount = parseInt(data.amount);
-    
+
     // Validate if the entered amount is a valid integer
     if (isNaN(data.amount)) {
       Alert.alert('Invalid Amount', 'Please enter a valid integer amount.');
       return;
     }
-  
+
     // Continue with your existing code
     console.log(data);
     try {
@@ -76,7 +90,6 @@ const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
     //SUCCESS
     setIsEditing(false);
   }
-  
 
   return (
     <View style={styles.container}>
@@ -151,7 +164,7 @@ const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
                   text: 'Confirm',
                   onPress: () => {
                     // HERE
-                    deleteItem(item)
+                    deleteItem(item);
                   },
                 },
               ],
