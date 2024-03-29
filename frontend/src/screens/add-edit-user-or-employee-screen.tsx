@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect} from 'react';
 import {Colors} from '../utils/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ImageStrings} from '../assets/image-strings';
@@ -52,25 +52,72 @@ const AddEditUserOrEmployeeScreen = ({
 
   const userType = useUser(state => state.type);
 
-  const {control, watch, handleSubmit} = useForm<AddUserOrEmployeeForm>({
-    defaultValues: {
-      // PREFILL THESE AS YOU FETCH FROM YOUR API :)
-      // THESE SHOULD CHANGE WHEN YOU INTEGRATE FROM YOUR APIS
-      lastName: '',
-      password: '',
-      username: '',
-      address: params.employee?.address || params.user?.address,
-      date: new Date(),
-      name: params?.employee?.name || params.user?.name || '',
-      plan: params.user?.plan,
-      type: params?.employee ? 'Employee' : 'Customer',
-      salary: params.employee?.salary ? params.employee.salary?.toString() : '',
-    },
-  });
+  const {control, watch, handleSubmit, setValue} =
+    useForm<AddUserOrEmployeeForm>({
+      defaultValues: {
+        // PREFILL THESE AS YOU FETCH FROM YOUR API :)
+        // THESE SHOULD CHANGE WHEN YOU INTEGRATE FROM YOUR APIS
+        lastName: '',
+        password: '',
+        username: '',
+        address: params.employee?.address || params.user?.address,
+        date: new Date(),
+        name: params?.employee?.name || params.user?.name || '',
+        plan: params.user?.plan,
+        type: params?.employee ? 'Employee' : 'Customer',
+        salary: params.employee?.salary
+          ? params.employee.salary?.toString()
+          : '',
+      },
+    });
 
   const insets = useSafeAreaInsets();
 
   const {accessToken, plans, equipments} = useUser(state => state);
+
+  useEffect(() => {
+    setValue('name', params?.user?.name || params?.employee?.name || '');
+    setValue(
+      'lastName',
+      params?.user?.last_name || params?.employee?.last_name || '',
+    );
+    setValue(
+      'username',
+      params?.user?.username || params?.employee?.username || '',
+    );
+    setValue(
+      'address',
+      params?.user?.address || params?.employee?.address || '',
+    );
+    setValue(
+      'date',
+      params?.user?.created_at || params?.employee?.created_at || new Date(),
+    );
+    setValue('plan', params?.user?.plan || params?.employee?.plan || null);
+    setValue('type', params?.employee ? 'Employee' : 'Customer');
+    setValue(
+      'salary',
+      params?.employee?.salary ? params?.employee?.salary.toString() : '',
+    );
+    setValue(
+      'equipment',
+      params?.user?.equipment || params?.employee?.equipment || null,
+    );
+
+    if (plans) {
+      const selectedPlan = plans.find(
+        plan => plan.plan_id === String(params?.user?.plan_id),
+      );
+      setValue('plan', selectedPlan ? selectedPlan.plan_name : null);
+    }
+
+    if (equipments && params?.user?.equipment_id) {
+      const selectedEquipment = equipments.find(
+        eq => eq.equipment_id === params?.user?.equipment_id,
+      );
+      setValue('equipment', selectedEquipment ? selectedEquipment.name : null);
+    }
+  }, [params, plans, equipments]);
 
   function onSubmit({
     address,
@@ -110,15 +157,21 @@ const AddEditUserOrEmployeeScreen = ({
       default:
         break;
     }
-  
+
     if (params.user || params.employee) {
-      console.log(type.toLocaleLowerCase())
+      console.log(type.toLocaleLowerCase());
       const responce = client
-        .put(`/${userType}/${type.toLocaleLowerCase()}s/${params.employee?.employee_id || params.user?.id}`, reqBody, {
-          headers: {
-            authorization: `Bearer ${accessToken}`,
+        .put(
+          `/${userType}/${type.toLocaleLowerCase()}s/${
+            params.employee?.username || params.user?.username
+          }`,
+          reqBody,
+          {
+            headers: {
+              authorization: `Bearer ${accessToken}`,
+            },
           },
-        })
+        )
         .then(() => {
           console.log('Update successful', responce.data);
         })
@@ -127,7 +180,7 @@ const AddEditUserOrEmployeeScreen = ({
           console.error('Update failed:', error);
         });
     } else {
-      console.log(type.toLocaleLowerCase())
+      console.log(type.toLocaleLowerCase());
       client
         .post(`/${userType}/${type.toLocaleLowerCase()}s`, reqBody, {
           headers: {
@@ -141,14 +194,13 @@ const AddEditUserOrEmployeeScreen = ({
           console.error('Creation failed:', error);
         });
     }
-  
+
     // Show confirmation alert
     Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
-      { text: 'Cancel' },
-      { text: 'Save', onPress: () => navigation.goBack() },
+      {text: 'Cancel'},
+      {text: 'Save', onPress: () => navigation.goBack()},
     ]);
   }
-  
 
   return (
     <ScrollView

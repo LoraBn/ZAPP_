@@ -157,9 +157,13 @@ const createEmployeeAccount = async (req, res) => {
         .status(409)
         .json({ error_message: "Username is already taken" });
     }
+
     const hashedPass = await bcrypt.hash(password, 10);
-    const queryText = `INSERT INTO employees ( owner_id, name, last_name, username, password_hash, salary)
-  VALUES ( $1,$2,$3, $4,$5, $6)`;
+    const queryText = `
+      INSERT INTO employees (owner_id, name, last_name, username, password_hash, salary)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *`;
+      
     pool.query(
       queryText,
       [ownerId, name, lastName, userName, hashedPass, salary],
@@ -168,6 +172,9 @@ const createEmployeeAccount = async (req, res) => {
           console.error("Error creating employee account:", err);
           res.status(500).json({ error_message: "Internal Server Error" });
         } else {
+          let room = `all${ownerId}`;
+          const newEmployeeData = results.rows[0]; // Extract newly inserted employee data
+          req.app.get('io').to(room).emit('newEmployee', newEmployeeData); // Emit new employee data
           res.status(201).json({ user_info: { userName, password } });
         }
       }
@@ -177,6 +184,7 @@ const createEmployeeAccount = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const deleteEmployee = async (req, res) => {
   try {
@@ -241,7 +249,7 @@ const updateEmployeeAccount = async (req, res) => {
     const updateQuery = {
       text: `
         UPDATE employees
-        SET name = $1, last_name = $2, username = $3, password_hash = $4 salary = $5
+        SET name = $1, last_name = $2, username = $3, password_hash = $4, salary = $5
         WHERE username = $6 AND owner_id = $7
         RETURNING employee_id`,
       values: [
@@ -297,7 +305,6 @@ const createCustomerAccount = async (req, res) => {
         .json({ error_message: "Username is already taken" });
     }
 
-
     const ownerId = req.user.userId;
     const equipmentResult = await pool.query(
       "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2",
@@ -322,19 +329,16 @@ const createCustomerAccount = async (req, res) => {
       VALUES($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING customer_id`;
 
-    const result = await pool.query(
-      queryText,
-      [
-        ownerId,
-        name,
-        lastName,
-        username,
-        hashedPass,
-        address,
-        planId,
-        equipmentId,
-      ]
-    );
+    const result = await pool.query(queryText, [
+      ownerId,
+      name,
+      lastName,
+      username,
+      hashedPass,
+      address,
+      planId,
+      equipmentId,
+    ]);
 
     res.status(201).json({ user_info: { username, password } });
   } catch (error) {
@@ -342,7 +346,6 @@ const createCustomerAccount = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const updateCustomerAccount = async (req, res) => {
   try {
@@ -370,8 +373,6 @@ const updateCustomerAccount = async (req, res) => {
       });
     }
 
-    const ownerId = req.user.userId;
-
     // Get existing customer details
     const existingCustomer = customerExists.rows[0];
 
@@ -387,25 +388,25 @@ const updateCustomerAccount = async (req, res) => {
       plan_id: planName
         ? (
             await pool.query(
-              "SELECT * FROM plans_prices WHERE plan_name = $1 RETURNING plan_id",
+              "SELECT * FROM plans_prices WHERE plan_name = $1",
               [planName]
             )
-          ).rows[0].plan_id
+          ).rows[0]?.plan_id || existingCustomer.plan_id
         : existingCustomer.plan_id,
-      equipement_id: equipmentName
+      equipment_id: equipmentName
         ? (
             await pool.query(
-              "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2 RETURNING equipement_id",
-              [ownerId, equipmentName]
+              "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2",
+              [ownerUserId, equipmentName]
             )
-          ).rows[0].equipement_id
-        : existingCustomer.equipement_id,
+          ).rows[0]?.equipment_id || existingCustomer.equipment_id
+        : existingCustomer.equipment_id,
     };
 
     const updateQuery = {
       text: `
         UPDATE customers
-        SET name = $1, last_name = $2, username = $3, password_hash = $4, address = $5, plan_id = $6, equipement_id = $7
+        SET name = $1, last_name = $2, username = $3, password_hash = $4, address = $5, plan_id = $6, equipment_id = $7
         WHERE username = $8 AND owner_id = $9
         RETURNING customer_id`,
       values: [
@@ -415,9 +416,9 @@ const updateCustomerAccount = async (req, res) => {
         updatedValues.password_hash,
         updatedValues.address,
         updatedValues.plan_id,
-        updatedValues.equipement_id,
+        updatedValues.equipment_id,
         customerUsername,
-        ownerId,
+        ownerUserId,
       ],
     };
 
@@ -425,7 +426,7 @@ const updateCustomerAccount = async (req, res) => {
 
     if (result.rowCount > 0) {
       res.status(201).json({
-        message: "Customer updated succesfully!",
+        message: "Customer updated successfully!",
         user_info: { username: updatedValues.username, password: password },
       });
     } else {

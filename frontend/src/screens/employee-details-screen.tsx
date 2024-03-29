@@ -151,7 +151,7 @@ const EmployeeDetailsScreen = ({
         </View>
         <View style={styles.accountsUserNameContainer}>
           {/* Change these from API and the user */}
-          <Text style={styles.text}>{employee.name}</Text>
+          <Text style={styles.text}>{employee.name} {employee.last_name}</Text>
         </View>
         <View style={styles.accountsUserNameContainer}>
           <Text style={styles.text}>Salary: ${employee.salary}</Text>

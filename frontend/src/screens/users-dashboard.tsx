@@ -19,6 +19,8 @@ import {UsersStackNavigationParams} from '../navigation/users-stack-navigation';
 import ScreenHeader from '../components/ui/screen-header';
 import {useUser} from '../storage/use-user';
 import client from '../API/client';
+import {io} from 'socket.io-client';
+import {ioString} from '../API/io';
 
 export const USERS_FILTERS = ['Done', 'Not Done', 'Pending'];
 export const EMPLOYEE_FILTERS = ['Paid', 'Not Paid'];
@@ -26,7 +28,7 @@ export const EMPLOYEE_FILTERS = ['Paid', 'Not Paid'];
 export interface User {
   customer_id: number;
   name: string;
-  last_name: string;
+  lastName: string;
   username: string;
   amount_to_pay: number;
   paid: number;
@@ -34,6 +36,7 @@ export interface User {
   address: string;
   remark: string;
   plan: '10Amp' | '5Amp' | '2Amp' | '20Amp';
+  equipment: string | null;
   payment_type: 'Fixed' | 'Not Fixed';
   profile_picture: string | null;
   created_at: Date;
@@ -43,6 +46,7 @@ export interface User {
 export interface Employee {
   employee_id: number;
   name: string;
+  lastName: string;
   username: string;
   permissions: string[];
   address: string;
@@ -83,8 +87,6 @@ export const DUMMY_USERS: User[] = [
     phone_number: 12312312,
   },
 ];
-
-// export const DUMMY_EMPLOYEES: Employee[] = [
 //   {
 //     id: 1,
 //     address: 'Home',
@@ -118,7 +120,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
   const insets = useSafeAreaInsets();
 
   const userType = useUser(state => state.type);
-  const {accessToken} = useUser(state => state);
+  const {accessToken, socket, setSocket} = useUser(state => state);
 
   const [usersType, setUsersType] = useState<'customers' | 'employees'>(
     'customers',
@@ -149,7 +151,21 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 
   useEffect(() => {
     fetchUsers();
+    establishWebSocketConnection();
   }, [usersType]);
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('creating new socket');
+    }
+    if (socket) {
+      socket.on('newEmployee', (data: any) => {
+        setEmployees(prevEmps => [data, ...prevEmps]);
+      });
+    }
+  };
 
   return (
     <View
