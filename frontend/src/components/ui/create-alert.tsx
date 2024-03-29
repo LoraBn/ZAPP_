@@ -1,10 +1,12 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Alert, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {Colors} from '../../utils/colors';
 import DropdownInput from './dropdown-input';
 import {useForm} from 'react-hook-form';
 import ElevatedCard from './elevated-card';
 import TextInput from './text-input';
+import client from '../../API/client';
+import {useUser} from '../../storage/use-user';
 
 type CreateAlertForm = {
   alertType: 'Maintenance' | 'Outage' | 'Customer Fix' | 'Other';
@@ -20,10 +22,28 @@ const CreateAlert = ({onSuccess}: CreateAlertProps) => {
     defaultValues: {alertMessage: '', alertType: 'Maintenance'},
   });
 
-  function onSubmit(data: CreateAlertForm) {
+  const {type, accessToken} = useUser(state => state);
+
+  async function onSubmit(data: CreateAlertForm) {
     // HERE
     console.log(data);
-    //HERE
+    try {
+      const reqBody = {
+        alert_type: data.alertType.toUpperCase(),
+        alert_message: data.alertMessage
+      }
+      const responce = await client.post(`/${type}/issues`, reqBody, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (responce.data){
+        Alert.alert(responce.data.message)
+      }
+    } catch (error: any) {
+      console.log(error.message);
+    }
 
     if (onSuccess) {
       onSuccess();

@@ -163,7 +163,7 @@ const createEmployeeAccount = async (req, res) => {
       INSERT INTO employees (owner_id, name, last_name, username, password_hash, salary)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *`;
-      
+
     pool.query(
       queryText,
       [ownerId, name, lastName, userName, hashedPass, salary],
@@ -174,7 +174,7 @@ const createEmployeeAccount = async (req, res) => {
         } else {
           let room = `all${ownerId}`;
           const newEmployeeData = results.rows[0]; // Extract newly inserted employee data
-          req.app.get('io').to(room).emit('newEmployee', newEmployeeData); // Emit new employee data
+          req.app.get("io").to(room).emit("newEmployee", newEmployeeData); // Emit new employee data
           res.status(201).json({ user_info: { userName, password } });
         }
       }
@@ -184,7 +184,6 @@ const createEmployeeAccount = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const deleteEmployee = async (req, res) => {
   try {
@@ -1542,8 +1541,7 @@ const deleteExpense = async (req, res) => {
 const createSupportTicket = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const { customer_username, ticket_title, ticket_message, is_urgent } =
-      req.body;
+    const { customer_username, ticket_message, is_urgent } = req.body;
 
     const createdByOnwer = true;
 
@@ -1556,13 +1554,12 @@ const createSupportTicket = async (req, res) => {
         .json({ error_message: "Error finding the customer" });
     }
 
-    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_title, ticket_message, is_urgent, created_by_owner) 
-      VALUES($1, $2, $3, $4, $5)`;
+    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent, created_by_owner) 
+      VALUES($1, $2, $3, $4)`;
 
     const result = await pool.query(queryText, [
       ownerId,
       customerId,
-      ticket_title,
       ticket_message,
       is_urgent,
       createdByOnwer,
@@ -1588,13 +1585,8 @@ const updateSupportTicket = async (req, res) => {
   try {
     const ownerId = req.user.userId;
     const ticketId = req.params.id;
-    const {
-      customer_username,
-      ticket_title,
-      ticket_message,
-      is_urgent,
-      is_closed,
-    } = req.body;
+    const { customer_username, ticket_message, is_urgent, is_closed } =
+      req.body;
 
     // Get the customer and employee IDs associated with the provided usernames and owner ID
     const customerId = await getCustomerIdForOwner(ownerId, customer_username);
@@ -1624,7 +1616,6 @@ const updateSupportTicket = async (req, res) => {
     // Determine the values to update
     const updatedValues = {
       customer_id: customerId || existingTicket.customer_id,
-      ticket_title: ticket_title || existingTicket.ticket_title,
       ticket_message: ticket_message || existingTicket.ticket_message,
       is_urgent: is_urgent || existingTicket.is_urgent,
       is_closed: is_closed || existingTicket.is_closed,
@@ -1634,12 +1625,11 @@ const updateSupportTicket = async (req, res) => {
     const updateQuery = {
       text: `
         UPDATE support_tickets
-        SET customer_id = $1, ticket_title = $2, ticket_message = $3, is_urgent = $4, is_closed = $5
-        WHERE ticket_id = $6 AND owner_id = $7
+        SET customer_id = $1, ticket_message = $2, is_urgent = $3, is_closed = $4
+        WHERE ticket_id = $5 AND owner_id = $6
         RETURNING ticket_id`,
       values: [
         updatedValues.customer_id,
-        updatedValues.ticket_title,
         updatedValues.ticket_message,
         updatedValues.is_urgent,
         updatedValues.is_closed,
@@ -1924,8 +1914,9 @@ const createAlertTicket = async (req, res) => {
     const ownerId = req.user.userId;
     const { alert_type, alert_message } = req.body;
 
-    const queryText = `INSERT INTO alerts (owner_id,  alert_type, alert_message, is_assigned, is_closed, user_type,created_by) 
-      VALUES($1, $2, $3, false, false,owner,$4)`;
+    const queryText = `INSERT INTO alerts (owner_id, alert_type, alert_message, is_assigned, is_closed, user_type, created_by) 
+      VALUES($1, $2, $3, false, false, 'owner', $4)
+      RETURNING alert_id`;
 
     const result = await pool.query(queryText, [
       ownerId,
@@ -1935,8 +1926,9 @@ const createAlertTicket = async (req, res) => {
     ]);
 
     if (result.rows.length > 0) {
+      const alertId = result.rows[0].alert_id;
       res.status(201).json({
-        alertId: result.rows[0].alert_id,
+        alertId,
         message: "Alert ticket created successfully!",
       });
     } else {
@@ -2048,9 +2040,22 @@ const getAlertTicket = async (req, res) => {
     const ownerId = req.user.userId;
     const alertId = req.params.id;
 
-    // Check if the alert ticket exists and is owned by the provided owner
-    const alertQuery =
-      "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
+    // Fetch alert information including owner username and creator username
+    const alertQuery = `
+      SELECT a.alert_id, a.owner_id, o.username AS owner_username, a.alert_type, a.alert_message,
+             a.is_closed, a.created_at, 
+             CASE 
+               WHEN a.user_type = 'owner' THEN co.username
+               WHEN a.user_type = 'employee' THEN ce.username
+             END AS created_by,
+             EXISTS (SELECT 1 FROM assigned_alerts WHERE alert_id = a.alert_id) AS is_assigned
+      FROM alerts a
+      JOIN owners o ON a.owner_id = o.owner_id
+      LEFT JOIN employees e ON a.created_by = e.employee_id
+      LEFT JOIN owners co ON a.created_by = co.owner_id AND a.user_type = 'owner'
+      LEFT JOIN employees ce ON a.created_by = ce.employee_id AND a.user_type = 'employee'
+      WHERE a.alert_id = $1 AND a.owner_id = $2
+    `;
     const alertResult = await pool.query(alertQuery, [alertId, ownerId]);
 
     if (alertResult.rows.length === 0) {
@@ -2061,7 +2066,51 @@ const getAlertTicket = async (req, res) => {
 
     const alertTicket = alertResult.rows[0];
 
-    res.status(200).json({ alert_ticket: alertTicket });
+    // Fetch assigned employees for the alert
+    const assignedEmployeesQuery = `
+      SELECT e.username
+      FROM assigned_alerts aa
+      JOIN employees e ON aa.employee_id = e.employee_id
+      WHERE aa.alert_id = $1
+    `;
+    const assignedEmployeesResult = await pool.query(assignedEmployeesQuery, [
+      alertId,
+    ]);
+    const assignedEmployees = assignedEmployeesResult.rows.map(
+      (row) => row.username
+    );
+
+    // Fetch replies for the alert from both employees and owners
+    const repliesQuery = `
+      SELECT ar.reply_text, 
+             CASE 
+               WHEN ar.isSentByOwner THEN o.username
+               ELSE e.username
+             END AS sender_username
+      FROM alert_replies ar
+      LEFT JOIN owners o ON ar.owner_id = o.owner_id
+      LEFT JOIN employees e ON ar.employee_id = e.employee_id
+      WHERE ar.alert_id = $1
+    `;
+    const repliesResult = await pool.query(repliesQuery, [alertId]);
+    const replies = repliesResult.rows;
+
+    // Combine alert ticket information, assigned employees, and replies into response
+    const response = {
+      alert_id: alertTicket.alert_id,
+      owner_id: alertTicket.owner_id,
+      owner_username: alertTicket.owner_username,
+      alert_type: alertTicket.alert_type,
+      alert_message: alertTicket.alert_message,
+      is_assigned: alertTicket.is_assigned,
+      assigned_employee_usernames: assignedEmployees,
+      is_closed: alertTicket.is_closed,
+      created_at: alertTicket.created_at,
+      created_by: alertTicket.created_by,
+      replies: replies,
+    };
+
+    res.status(200).json({ alert_ticket: response });
   } catch (error) {
     console.error("Error retrieving alert ticket:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
@@ -2200,7 +2249,7 @@ const createAlertReply = async (req, res) => {
     const { replyText } = req.body;
 
     const isAlertClosedResult = await pool.query(
-      "SELECT is_closed FROM alerts WHERE ticket_id = $1",
+      "SELECT is_closed FROM alerts WHERE alert_id = $1",
       [alertId]
     );
 
@@ -2208,13 +2257,13 @@ const createAlertReply = async (req, res) => {
       isAlertClosedResult.rows.length > 0 &&
       isAlertClosedResult.rows[0].is_closed
     ) {
-      return res.status(403).json({ error_message: "Ticket is closed" });
+      return res.status(403).json({ error_message: "Alert is closed" });
     }
 
     const queryText = `
       INSERT INTO alert_replies (alert_id, owner_id,reply_text, issentbyowner) 
       VALUES($1, $2, $3, $4)
-      RETURNING reply_id, created_at
+      RETURNING reply_id
     `;
 
     const result = await pool.query(queryText, [
@@ -2225,12 +2274,11 @@ const createAlertReply = async (req, res) => {
     ]);
 
     if (result.rows.length > 0) {
-      const { reply_id, created_at } = result.rows[0];
+      const { reply_id } = result.rows[0];
       const userType = isSentByOwner ? "owner" : "employee";
       res.status(201).json({
         replyId: reply_id,
         userType: userType,
-        createdAt: created_at,
         message: "Reply created successfully!",
       });
     } else {

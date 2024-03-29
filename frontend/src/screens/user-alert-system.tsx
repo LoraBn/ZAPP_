@@ -1,5 +1,5 @@
 import {Pressable, SectionList, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import ScreenHeader from '../components/ui/screen-header';
 import Card from '../components/ui/card';
@@ -10,6 +10,7 @@ import UserAlertItem from '../components/ui/user-alert-item';
 import SectionListHeader from '../components/ui/section-list-header';
 import CreateAlert from '../components/ui/create-alert';
 import {useUser} from '../storage/use-user';
+import client from '../API/client';
 
 export type Alert = {
   id: number;
@@ -24,47 +25,70 @@ export type Alert = {
   open: boolean;
 };
 
-export const DUMMY_ALERTS: Alert[] = [
+export type ALERT = {
+  alert_id: number;
+  owner_id: number;
+  owner_username: string;
+  alert_type: string;
+  alert_message: string;
+  is_assigned: boolean;
+  is_closed: boolean;
+  created_at: Date;
+  created_by: string;
+  replies: {sender_username: string; reply_text: string}[];
+};
+
+export type Ticket = {
+  ticket_id: number;
+  customer_id: number;
+  ticket_message: string;
+  is_closed: boolean;
+  created_at: Date;
+  is_urgent: boolean;
+  created_by_owner: boolean;
+};
+
+export const DUMMY_ALERTS: ALERT[] = [
   {
-    id: 1,
-    owner: 'Samira',
-    owner_description: 'Description',
-    owner_reply: 'REplied here',
-    urgent: true,
-    user: DUMMY_USERS[0],
-    user_description: 'Shou bed',
-    title: 'Djontirrr',
-    date: new Date(),
-    open: false,
+    alert_id: 1,
+    owner_id: 1,
+    owner_username: 'Samira',
+    alert_type: 'Type',
+    alert_message: 'Message',
+    is_assigned: false,
+    is_closed: false,
+    created_at: new Date(),
+    created_by: 'User 1',
+    replies: [],
   },
   {
-    id: 2,
-    owner: 'Samira',
-    owner_description: 'Description',
-    owner_reply: 'REplied here',
-    urgent: true,
-    user: DUMMY_USERS[0],
-    user_description: 'Shou bed',
-    title: 'Djontirrr',
-    date: new Date(),
-    open: true,
+    alert_id: 2,
+    owner_id: 1,
+    owner_username: 'Samira',
+    alert_type: 'Type',
+    alert_message: 'Message',
+    is_assigned: false,
+    is_closed: false,
+    created_at: new Date(),
+    created_by: 'User 1',
+    replies: [],
   },
   {
-    id: 3,
-    owner: 'Samira',
-    owner_description: 'Description',
-    owner_reply: 'REplied here',
-    urgent: true,
-    user: DUMMY_USERS[0],
-    user_description: 'Shou bed',
-    title: 'Djontirrrdsa',
-    date: new Date(),
-    open: false,
+    alert_id: 3,
+    owner_id: 1,
+    owner_username: 'Samira',
+    alert_type: 'Type',
+    alert_message: 'Message',
+    is_assigned: false,
+    is_closed: true,
+    created_at: new Date(),
+    created_by: 'User 1',
+    replies: [],
   },
 ];
 
-function formatAlertsForSectionList(alerts: Alert[]) {
-  const sections: {data: Alert[]; title: 'Open' | 'Closed'}[] = [
+function formatAlertsForSectionList(alerts: ALERT[]) {
+  const sections: {data: ALERT[]; title: 'Open' | 'Closed'}[] = [
     {data: [], title: 'Open'},
     {data: [], title: 'Closed'},
   ];
@@ -72,7 +96,7 @@ function formatAlertsForSectionList(alerts: Alert[]) {
   for (let i = 0; i < alerts.length; i++) {
     const alert = alerts[i];
 
-    if (alert.open) {
+    if (!alert.is_closed) {
       sections[0].data.push(alert);
     } else {
       sections[1].data.push(alert);
@@ -89,12 +113,40 @@ const UserAlertSystem = () => {
 
   const [isCreatingAlert, setIsCreatingAlert] = useState(false);
 
-  const [usersType, setUsersType] = useState<'users' | 'employees'>('users');
+  const [usersType, setUsersType] = useState<'customers' | 'employees'>(
+    'customers',
+  );
   const [filter, setFilter] = useState<'urgent' | 'not_urgent' | null>(null);
 
-  const sections = formatAlertsForSectionList(DUMMY_ALERTS);
 
-  // DID NOT MAKE SENSE TO ADD FILTERS ON OPEN CLOSE I DID NOT ADD IT, IF YOU WANT TO ADD IT GO AHEAD BUT IT JUST DOESNT MAKE SENSE SINCE THE LIST IS ALREADY SEPERATED
+  const {accessToken} = useUser(state => state);
+
+  useEffect(() => {
+    fetchIssues();
+  }, [usersType]);
+
+  const [sections, setSections] = useState<ALERT[] | undefined>(undefined);
+
+// Change the fetchIssues function to update the sections state:
+const fetchIssues = async () => {
+  try {
+    const response = await client.get(`/${userType}/issues`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (response) {
+      const alertTicketList: ALERT[] = response.data.alert_ticket_list;
+      const formattedSections = formatAlertsForSectionList(alertTicketList);
+      setSections(formattedSections);
+      console.log(alertTicketList)
+    }
+  } catch (error: any) {
+    console.log(error.message);
+  }
+};
+
   return (
     <View style={styles.screen}>
       <ScreenHeader>Alert System</ScreenHeader>
@@ -106,8 +158,8 @@ const UserAlertSystem = () => {
             <Text style={styles.topItemText}>Employee</Text>
           </Card>
           <Card
-            selected={usersType === 'users'}
-            onPress={() => setUsersType('users')}>
+            selected={usersType === 'customers'}
+            onPress={() => setUsersType('customers')}>
             <Text style={styles.topItemText}>Customer</Text>
           </Card>
         </View>
@@ -158,18 +210,19 @@ const UserAlertSystem = () => {
             </Card>
           </View>
         )}
-        <Pressable
-          style={styles.container}
-          onPress={() =>
-            setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
-          }>
-          <Text style={styles.text}>{'Create Alert'}</Text>
-        </Pressable>
-        <SectionList
+        {usersType === 'employees' && (
+          <Pressable
+            style={styles.container}
+            onPress={() =>
+              setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
+            }>
+            <Text style={styles.text}>{'Create Alert'}</Text>
+          </Pressable>
+        )}
+        {sections && <SectionList
           sections={sections}
-          // eslint-disable-next-line react/no-unstable-nested-components
           ListHeaderComponent={() =>
-            isCreatingAlert ? (
+            usersType === 'employees' && isCreatingAlert ? (
               <>
                 <CreateAlert onSuccess={() => setIsCreatingAlert(false)} />
               </>
@@ -179,7 +232,7 @@ const UserAlertSystem = () => {
           SectionSeparatorComponent={ListSeperator}
           ItemSeparatorComponent={ListSeperator}
           renderItem={props => <UserAlertItem {...props} />}
-        />
+        />}
       </View>
     </View>
   );
@@ -245,13 +298,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.SuperLightBlue,
     paddingHorizontal: 15,
     borderRadius: 25,
-  },
-  plusContainer: {
-    backgroundColor: Colors.Blue,
-    borderRadius: 100,
-    height: 30,
-    width: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

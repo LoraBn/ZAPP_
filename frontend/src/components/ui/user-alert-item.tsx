@@ -5,17 +5,18 @@ import {
   Text,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
-import {Alert} from '../../screens/user-alert-system';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../../utils/colors';
 import {formatDate} from '../../utils/date-utils';
 import TextInput from './text-input';
 import {useForm} from 'react-hook-form';
 import ElevatedCard from './elevated-card';
 import {useUser} from '../../storage/use-user';
+import client from '../../API/client';
+import {ALERT} from '../../screens/user-alert-system';
 
 type UserAlertItemProps = {
-  item: Alert;
+  item: ALERT;
   index: number;
 };
 
@@ -31,6 +32,8 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const {accessToken} = useUser(state => state);
+  const [alert, setAlert] = useState<ALERT>(item);
 
   const titleContainerBottomWidth = {
     borderBottomWidth: 1,
@@ -38,9 +41,30 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
     paddingBottom: 15,
   };
 
-  function onSubmit({reply}: ReplyToAlertForm) {
-    // SUBMIT HERE
+  useEffect(() => {
+    fetchIssuesDetails();
+  }, []);
 
+  const fetchIssuesDetails = async () => {
+    try {
+      const response = await client.get(
+        `/${userType}/issues/${item.alert_id}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (response) {
+        setAlert(response.data.alert_ticket);
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  function onSubmit({reply}: ReplyToAlertForm) {
     console.log(reply);
 
     RNAlert.alert(
@@ -72,35 +96,29 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
           <Text
             style={[
               styles.exclamationMark,
-              {color: item.urgent ? Colors.Red : Colors.Black},
+              {color: alert.is_closed ? Colors.Red : Colors.Black},
             ]}>
             !
           </Text>
         )}
-        <Text style={styles.text}>{item.title}</Text>
-        <Text style={styles.text}>{formatDate(item.date)}</Text>
+        <Text style={styles.text}>{alert.alert_message}</Text>
+        <Text style={styles.text}>{formatDate(alert.created_at)}</Text>
       </View>
-      {isExpanded && (
+      {isExpanded && alert.replies && (
         <>
           <View style={styles.itemsContainer}>
-            <View style={styles.userOwnerContainer}>
-              <Text style={[styles.text, styles.ownerUserText]}>
-                {item.user.name}
-              </Text>
-              <Text style={[styles.text, styles.descriptionText]}>
-                {item.user_description}
-              </Text>
-            </View>
-            <View style={styles.userOwnerContainer}>
-              <Text style={[styles.text, styles.ownerUserText]}>
-                {item.user.name}
-              </Text>
-              <Text style={[styles.text, styles.descriptionText]}>
-                {item.user_description}
-              </Text>
-            </View>
+            {alert.replies&& alert.replies.reverse().map((reply, index) => (
+              <View style={styles.userOwnerContainer} key={index}>
+                <Text style={[styles.text, styles.ownerUserText]}>
+                  {reply.sender_username}
+                </Text>
+                <Text style={[styles.text, styles.descriptionText]}>
+                  {reply.reply_text}
+                </Text>
+              </View>
+            ))}
           </View>
-          {item?.open && (
+          {!alert.is_closed && (
             <View>
               <TextInput
                 control={control}
@@ -110,9 +128,6 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
                 placeholder="Reply..."
                 multiline
               />
-              {
-                //HERE YOU SHOULD HANDLE CLOSE / ASSIGN BASED ON WHAT URE RECEIVING FROM THE API
-              }
               <View style={styles.closeOrSubmitElevatedButtonContainer}>
                 <ElevatedCard textStyle={styles.elButtonsText}>
                   {userType === 'customer' ? 'Close' : 'Close / Assign'}
@@ -144,10 +159,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   descriptionText: {top: 20},
-  itemsContainer: {
-    gap: 42,
-    padding: 10,
-  },
+  itemsContainer: {gap: 42, padding: 10},
   ownerUserText: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.Black,
@@ -167,11 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 15,
   },
-  text: {
-    color: Colors.Black,
-    fontWeight: '700',
-    fontSize: 16,
-  },
+  text: {color: Colors.Black, fontWeight: '700', fontSize: 16},
   exclamationMark: {
     position: 'absolute',
     zIndex: 25,
