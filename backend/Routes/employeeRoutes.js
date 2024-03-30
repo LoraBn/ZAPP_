@@ -19,6 +19,8 @@ const {
   getElectricScheduleEmp,
   getKwhPriceEmp,
   getEmployeeExpenses,
+  getAllOpenAlertTickets,
+  closeAlertTicketEmp,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -73,9 +75,10 @@ module.exports = function (io) {
   router.get("/price", authenticateEmployeeToken, getKwhPriceEmp);
 
   //alerts
-  router.get("/issues/open", authenticateEmployeeToken, getAllOpenAlertsEmp);
+  router.get("/issues", authenticateEmployeeToken, getAllOpenAlertTickets);
   router.get("/issues/:id", authenticateEmployeeToken, getAlertTicketEmp);
   router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
+  router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
 
   //alert replies
   router.post(

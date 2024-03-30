@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {Colors} from '../../utils/colors';
@@ -14,6 +15,8 @@ import ElevatedCard from './elevated-card';
 import {useUser} from '../../storage/use-user';
 import client from '../../API/client';
 import {ALERT} from '../../screens/user-alert-system';
+import {ioString} from '../../API/io';
+import {io} from 'socket.io-client';
 
 type UserAlertItemProps = {
   item: ALERT;
@@ -21,18 +24,18 @@ type UserAlertItemProps = {
 };
 
 type ReplyToAlertForm = {
-  reply: string;
+  replyText: string;
 };
 
 const UserAlertItem = ({item}: UserAlertItemProps) => {
   const userType = useUser(state => state.type);
 
   const {control, handleSubmit, reset} = useForm<ReplyToAlertForm>({
-    defaultValues: {reply: ''},
+    defaultValues: {replyText: ''},
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const {accessToken} = useUser(state => state);
+  const {accessToken, socket, setSocket} = useUser(state => state);
   const [alert, setAlert] = useState<ALERT>(item);
 
   const titleContainerBottomWidth = {
@@ -41,46 +44,59 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
     paddingBottom: 15,
   };
 
-  useEffect(() => {
-    fetchIssuesDetails();
-  }, []);
-
-  const fetchIssuesDetails = async () => {
+  const onClose = async () => {
     try {
-      const response = await client.get(
-        `/${userType}/issues/${item.alert_id}`,
+      const response = await client.put(
+        `/${userType}/issues/${item.alert_id}/close`,
+        null,
         {
           headers: {
-            authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         },
       );
-
       if (response) {
-        setAlert(response.data.alert_ticket);
+        console.log('hi');
       }
     } catch (error) {
-      console.log(error.message);
+      console.log(error);
     }
   };
 
-  function onSubmit({reply}: ReplyToAlertForm) {
-    console.log(reply);
+  async function onSubmit({replyText}: ReplyToAlertForm) {
+    console.log(replyText);
 
-    RNAlert.alert(
-      'Confirm?',
-      'Do you confirm your info aw shi hek? You Change this to whatever you want',
-      [
-        {text: 'Cancel'},
+    try {
+      const responce = await client.post(
+        `/${userType}/issue/${item.alert_id}/reply`,
+        {replyText},
         {
-          text: 'Save',
-          onPress: () => {
-            setIsExpanded(false);
-            reset();
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
         },
-      ],
-    );
+      );
+      if (responce) {
+        reset();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+
+    // RNAlert.alert(
+    //   'Confirm?',
+    //   'Do you confirm your info aw shi hek? You Change this to whatever you want',
+    //   [
+    //     {text: 'Cancel'},
+    //     {
+    //       text: 'Save',
+    //       onPress: () => {
+    //         setIsExpanded(false);
+    //         reset();
+    //       },
+    //     },
+    //   ],
+    // );
   }
 
   return (
@@ -96,40 +112,49 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
           <Text
             style={[
               styles.exclamationMark,
-              {color: alert.is_closed ? Colors.Red : Colors.Black},
+              {color: !item.is_closed ? Colors.Red : Colors.Black},
             ]}>
             !
           </Text>
         )}
-        <Text style={styles.text}>{alert.alert_message}</Text>
-        <Text style={styles.text}>{formatDate(alert.created_at)}</Text>
+        <Text style={styles.text}>{item.created_by}</Text>
+        <Text style={styles.text}>{item.alert_type}</Text>
+        <Text style={styles.text}>{formatDate(item.created_at)}</Text>
       </View>
-      {isExpanded && alert.replies && (
+      {isExpanded && (
+        <View>
+          <Text style={styles.text}>Description: {item.alert_message}</Text>
+        </View>
+      )}
+      {isExpanded && item.replies && (
         <>
           <View style={styles.itemsContainer}>
-            {alert.replies&& alert.replies.reverse().map((reply, index) => (
-              <View style={styles.userOwnerContainer} key={index}>
-                <Text style={[styles.text, styles.ownerUserText]}>
-                  {reply.sender_username}
-                </Text>
-                <Text style={[styles.text, styles.descriptionText]}>
-                  {reply.reply_text}
-                </Text>
-              </View>
-            ))}
+            {item.replies &&
+              item.replies.map((reply, index) => (
+                <View style={styles.userOwnerContainer} key={index}>
+                  <Text style={[styles.text, styles.ownerUserText]}>
+                    {reply.sender_username}
+                  </Text>
+                  <Text style={[styles.text, styles.descriptionText]}>
+                    {reply.reply_text}
+                  </Text>
+                </View>
+              ))}
           </View>
-          {!alert.is_closed && (
+          {!item.is_closed && (
             <View>
               <TextInput
                 control={control}
-                name="reply"
+                name="replyText"
                 backgroundColor={Colors.White}
                 textColor={Colors.Black}
                 placeholder="Reply..."
                 multiline
               />
               <View style={styles.closeOrSubmitElevatedButtonContainer}>
-                <ElevatedCard textStyle={styles.elButtonsText}>
+                <ElevatedCard
+                  textStyle={styles.elButtonsText}
+                  onPress={onClose}>
                   {userType === 'customer' ? 'Close' : 'Close / Assign'}
                 </ElevatedCard>
                 <ElevatedCard

@@ -1916,7 +1916,7 @@ const createAlertTicket = async (req, res) => {
 
     const queryText = `INSERT INTO alerts (owner_id, alert_type, alert_message, is_assigned, is_closed, user_type, created_by) 
       VALUES($1, $2, $3, false, false, 'owner', $4)
-      RETURNING alert_id`;
+      RETURNING *`;
 
     const result = await pool.query(queryText, [
       ownerId,
@@ -1927,8 +1927,25 @@ const createAlertTicket = async (req, res) => {
 
     if (result.rows.length > 0) {
       const alertId = result.rows[0].alert_id;
+
+      const createdAlert = {
+        alert_id: alertId,
+        owner_id: ownerId,
+        owner_username: req.user.username,
+        alert_type,
+        alert_message,
+        is_assigned: false,
+        is_closed: false,
+        created_at: result.rows[0].created_at,
+        created_by: req.user.username,
+        replies: [], // Reverse the order of replies to match the structure
+      };
+
+      // Emit the created alert through socket
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("newIssue", createdAlert);
       res.status(201).json({
-        alertId,
+        alert_ticket: createdAlert,
         message: "Alert ticket created successfully!",
       });
     } else {
@@ -2107,7 +2124,7 @@ const getAlertTicket = async (req, res) => {
       is_closed: alertTicket.is_closed,
       created_at: alertTicket.created_at,
       created_by: alertTicket.created_by,
-      replies: replies,
+      replies: replies.reverse(),
     };
 
     res.status(200).json({ alert_ticket: response });
@@ -2122,10 +2139,55 @@ const getAllAlertTickets = async (req, res) => {
     const ownerId = req.user.userId;
 
     // Retrieve all alert tickets for the provided owner
-    const alertsQuery = "SELECT * FROM alerts WHERE owner_id = $1";
+    const alertsQuery = `
+      SELECT a.alert_id, a.owner_id, o.username AS owner_username, a.alert_type, a.alert_message,
+             a.is_closed, a.created_at, 
+             CASE 
+               WHEN a.user_type = 'owner' THEN co.username
+               WHEN a.user_type = 'employee' THEN ce.username
+             END AS created_by,
+             EXISTS (SELECT 1 FROM assigned_alerts WHERE alert_id = a.alert_id) AS is_assigned
+      FROM alerts a
+      JOIN owners o ON a.owner_id = o.owner_id
+      LEFT JOIN employees e ON a.created_by = e.employee_id
+      LEFT JOIN owners co ON a.created_by = co.owner_id AND a.user_type = 'owner'
+      LEFT JOIN employees ce ON a.created_by = ce.employee_id AND a.user_type = 'employee'
+      WHERE a.owner_id = $1
+      ORDER BY a.created_at DESC
+    `;
     const alertsResult = await pool.query(alertsQuery, [ownerId]);
 
-    const alertTicketList = alertsResult.rows;
+    const alertTicketList = [];
+    for (const alert of alertsResult.rows) {
+      // Fetch replies for each alert from both employees and owners
+      const repliesQuery = `
+        SELECT ar.reply_text, 
+               CASE 
+                 WHEN ar.isSentByOwner THEN o.username
+                 ELSE e.username
+               END AS sender_username
+        FROM alert_replies ar
+        LEFT JOIN owners o ON ar.owner_id = o.owner_id
+        LEFT JOIN employees e ON ar.employee_id = e.employee_id
+        WHERE ar.alert_id = $1
+      `;
+      const repliesResult = await pool.query(repliesQuery, [alert.alert_id]);
+      const replies = repliesResult.rows;
+
+      const alertTicket = {
+        alert_id: alert.alert_id,
+        owner_id: alert.owner_id,
+        owner_username: alert.owner_username,
+        alert_type: alert.alert_type,
+        alert_message: alert.alert_message,
+        is_assigned: alert.is_assigned,
+        is_closed: alert.is_closed,
+        created_at: alert.created_at,
+        created_by: alert.created_by,
+        replies: replies.reverse(), // Reverse the order of replies to match the structure
+      };
+      alertTicketList.push(alertTicket);
+    }
 
     res.status(200).json({ alert_ticket_list: alertTicketList });
   } catch (error) {
@@ -2175,6 +2237,13 @@ const closeAlertTicket = async (req, res) => {
     const ownerId = req.user.userId;
     const alertId = req.params.id;
 
+    // Check if alertId and ownerId are defined and valid
+    if (!alertId || !ownerId) {
+      return res
+        .status(400)
+        .json({ error_message: "Invalid alert ID or owner ID" });
+    }
+
     // Check if the alert ticket exists and is owned by the provided owner
     const alertExistsQuery =
       "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
@@ -2194,16 +2263,17 @@ const closeAlertTicket = async (req, res) => {
       text: `
         UPDATE alerts
         SET is_closed = true
-        WHERE alert_id = $1 AND owner_id = $2
-        RETURNING alert_id`,
+        WHERE alert_id = $1 AND owner_id = $2`,
       values: [alertId, ownerId],
     };
 
     const closeResult = await pool.query(closeQuery);
 
     if (closeResult.rowCount > 0) {
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("closedIssue", { alert_id: alertId });
       res.status(200).json({
-        alert_id: closeResult.rows[0].alert_id,
+        alert_id: alertId,
         message: "Alert ticket closed successfully!",
       });
     } else {
@@ -2245,8 +2315,10 @@ const createAlertReply = async (req, res) => {
   try {
     const ownerId = req.user.userId;
     const alertId = req.params.id;
+    const username = req.user.username;
     const isSentByOwner = true;
     const { replyText } = req.body;
+    console.log(replyText);
 
     const isAlertClosedResult = await pool.query(
       "SELECT is_closed FROM alerts WHERE alert_id = $1",
@@ -2261,7 +2333,7 @@ const createAlertReply = async (req, res) => {
     }
 
     const queryText = `
-      INSERT INTO alert_replies (alert_id, owner_id,reply_text, issentbyowner) 
+      INSERT INTO alert_replies (alert_id, owner_id, reply_text, issentbyowner) 
       VALUES($1, $2, $3, $4)
       RETURNING reply_id
     `;
@@ -2281,6 +2353,17 @@ const createAlertReply = async (req, res) => {
         userType: userType,
         message: "Reply created successfully!",
       });
+      let room = `emp${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("newIssueReply", {
+          alert_id: alertId,
+          message: {
+            sender_username: username,
+            reply_text: replyText,
+          },
+        }); // Corrected line
     } else {
       res.status(500).json({ error_message: "Failed to create reply" });
     }

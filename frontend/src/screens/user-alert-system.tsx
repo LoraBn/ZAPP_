@@ -11,6 +11,8 @@ import SectionListHeader from '../components/ui/section-list-header';
 import CreateAlert from '../components/ui/create-alert';
 import {useUser} from '../storage/use-user';
 import client from '../API/client';
+import {ioString} from '../API/io';
+import {io} from 'socket.io-client';
 
 export type Alert = {
   id: number;
@@ -93,16 +95,17 @@ function formatAlertsForSectionList(alerts: ALERT[]) {
     {data: [], title: 'Closed'},
   ];
 
-  for (let i = 0; i < alerts.length; i++) {
-    const alert = alerts[i];
+  if (alerts) {
+    for (let i = 0; i < alerts.length; i++) {
+      const alert = alerts[i];
 
-    if (!alert.is_closed) {
-      sections[0].data.push(alert);
-    } else {
-      sections[1].data.push(alert);
+      if (!alert.is_closed) {
+        sections[0].data.push(alert);
+      } else {
+        sections[1].data.push(alert);
+      }
     }
   }
-
   return sections;
 }
 
@@ -118,34 +121,129 @@ const UserAlertSystem = () => {
   );
   const [filter, setFilter] = useState<'urgent' | 'not_urgent' | null>(null);
 
-
-  const {accessToken} = useUser(state => state);
+  const {accessToken, socket, setSocket} = useUser(state => state);
 
   useEffect(() => {
     fetchIssues();
   }, [usersType]);
 
+  useEffect(() => {
+    establishWebSocketConnection();
+  }, []);
+
   const [sections, setSections] = useState<ALERT[] | undefined>(undefined);
 
-// Change the fetchIssues function to update the sections state:
-const fetchIssues = async () => {
-  try {
-    const response = await client.get(`/${userType}/issues`, {
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-      },
-    });
+  // Change the fetchIssues function to update the sections state:
+  const fetchIssues = async () => {
+    try {
+      const response = await client.get(`/${userType}/issues`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    if (response) {
-      const alertTicketList: ALERT[] = response.data.alert_ticket_list;
-      const formattedSections = formatAlertsForSectionList(alertTicketList);
-      setSections(formattedSections);
-      console.log(alertTicketList)
+      if (response) {
+        const alertTicketList: ALERT[] = response.data.alert_ticket_list;
+        const formattedSections = formatAlertsForSectionList(alertTicketList);
+        setSections(formattedSections);
+        console.log('success', sections);
+      }
+    } catch (error: any) {
+      console.log(error.message);
     }
-  } catch (error: any) {
-    console.log(error.message);
-  }
-};
+  };
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('creating new socket');
+    }
+
+    if (socket) {
+      socket.on('closedIssue', ({alert_id}) => {
+        console.log(alert_id);
+        setSections(prevSections => {
+          const updatedSections = [...prevSections];
+
+          const openSectionIndex = updatedSections.findIndex(
+            section => section.title === 'Open',
+          );
+          const closedSectionIndex = updatedSections.findIndex(
+            section => section.title === 'Closed',
+          );
+          console.log(openSectionIndex, closedSectionIndex);
+
+          const alertIndex = updatedSections[openSectionIndex].data.findIndex(
+            alert => alert.alert_id === alert_id,
+          );
+
+          console.log(alertIndex);
+
+          if (alertIndex !== -1) {
+            const removedAlert = updatedSections[openSectionIndex].data.splice(
+              alertIndex,
+              1,
+            )[0];
+            console.log('removed:', removedAlert);
+
+            updatedSections[closedSectionIndex].data.push(removedAlert);
+          }
+
+          console.log(updatedSections);
+          return updatedSections;
+        });
+      });
+
+      socket.on('newIssue', newAlert => {
+        console.log('New Alert:', newAlert);
+        setSections(prevSections => {
+          const updatedSections = [...prevSections];
+
+          // Determine where to add the new alert based on its status (open/closed)
+          const sectionIndex = newAlert.is_closed
+            ? updatedSections.findIndex(section => section.title === 'Closed')
+            : updatedSections.findIndex(section => section.title === 'Open');
+
+          if (sectionIndex !== -1) {
+            // Add the new alert to the appropriate section's data array at the beginning
+            updatedSections[sectionIndex].data.unshift(newAlert);
+            console.log(updatedSections);
+          }
+
+          console.log(updatedSections);
+          return updatedSections;
+        });
+      });
+
+      socket.on('newIssueReply', ({alert_id, message}) => {
+        setSections(prevSections => {
+          const updatedSections = [...prevSections];
+
+          // Find the alert with the matching ID
+          const sectionIndex = updatedSections.findIndex(section =>
+            section.data.some(alert => alert.alert_id === alert_id),
+          );
+
+          if (sectionIndex !== -1) {
+            // Find the index of the alert in the section's data array
+            const alertIndex = updatedSections[sectionIndex].data.findIndex(
+              alert => alert.alert_id === alert_id,
+            );
+
+            if (alertIndex !== -1) {
+              // Update the alert with the new reply message
+              updatedSections[sectionIndex].data[alertIndex].replies.push(
+                message,
+              );
+            }
+          }
+
+          return updatedSections;
+        });
+      });
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -210,29 +308,35 @@ const fetchIssues = async () => {
             </Card>
           </View>
         )}
-        {usersType === 'employees' && (
-          <Pressable
-            style={styles.container}
-            onPress={() =>
-              setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
-            }>
-            <Text style={styles.text}>{'Create Alert'}</Text>
-          </Pressable>
+
+        <Pressable
+          style={styles.container}
+          onPress={() =>
+            setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
+          }>
+          <Text style={styles.text}>{'Create Alert'}</Text>
+        </Pressable>
+
+        {sections && (
+          <SectionList
+            sections={
+              usersType === 'employees' || userType === 'employee'
+                ? sections
+                : ''
+            }
+            ListHeaderComponent={() =>
+              isCreatingAlert ? (
+                <>
+                  <CreateAlert onSuccess={() => setIsCreatingAlert(false)} />
+                </>
+              ) : null
+            }
+            renderSectionHeader={SectionListHeader}
+            SectionSeparatorComponent={ListSeperator}
+            ItemSeparatorComponent={ListSeperator}
+            renderItem={props => <UserAlertItem {...props} />}
+          />
         )}
-        {sections && <SectionList
-          sections={sections}
-          ListHeaderComponent={() =>
-            usersType === 'employees' && isCreatingAlert ? (
-              <>
-                <CreateAlert onSuccess={() => setIsCreatingAlert(false)} />
-              </>
-            ) : null
-          }
-          renderSectionHeader={SectionListHeader}
-          SectionSeparatorComponent={ListSeperator}
-          ItemSeparatorComponent={ListSeperator}
-          renderItem={props => <UserAlertItem {...props} />}
-        />}
       </View>
     </View>
   );
