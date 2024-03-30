@@ -5,12 +5,10 @@ import {dateFromNow} from '../../utils/date-utils';
 
 type AlertItemProps = {
   item: {
-    id: number;
-    user: {
-      name: string;
-    };
-    alert: string;
-    date: Date;
+    alert_id: number;
+    alert_message: string;
+    created_by: string;
+    created_at: Date;
   };
   index: number;
 };
@@ -18,9 +16,9 @@ type AlertItemProps = {
 const AlertItem = ({item}: AlertItemProps) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>{item.user.name}</Text>
-      <Text style={styles.alertText}>{item.alert}</Text>
-      <Text style={styles.bottomDate}>{dateFromNow(item.date)}</Text>
+      <Text style={styles.userText}>{item.created_by}</Text>
+      <Text style={styles.alertText}>{item.alert_message}</Text>
+      <Text style={styles.bottomDate}>{dateFromNow(item.created_at)}</Text>
     </View>
   );
 };

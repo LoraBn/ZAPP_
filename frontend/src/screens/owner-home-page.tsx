@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -119,7 +120,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   ];
 
   //Equipments
-  
+
   const fetchEquipments = async () => {
     try {
       const response = await client.get(`/${type}/equipments`, {
@@ -154,6 +155,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     establishWebSocketConnection();
     fetchEmployees();
     fetchPlans();
+    fetchIssues();
     return () => {
       if (socket != null) {
         socket.disconnect();
@@ -171,6 +173,22 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       // const PlansArray = responce.data.plans.map((plan: any) => plan.plan_name);
       setPlans(responce.data.plans);
     } catch (error: any) {
+      console.log(error);
+    }
+  };
+
+  const [issues, setIssues] = useState<Alert>([]);
+  const fetchIssues = async () => {
+    try {
+      const responce = await client.get(`/${type}/issues`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (responce) {
+        setIssues(responce.data.alert_ticket_list);
+      }
+    } catch (error) {
       console.log(error);
     }
   };
@@ -213,22 +231,27 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     });
     newSocket.on('newEquipment', (data: any) => {
       console.log('New equipmenet added:', data);
-      setEquipments(prevEquipments => [data, ...prevEquipments]);
+      setEquipments((prevEquipments) => [data, ...prevEquipments]);
     });
     newSocket.on('updateEquipment', (data: any) => {
       console.log('Im here');
       const {oldName, name, price, description, status} = data;
       const newEq = {name, price, description, status};
-      setEquipments(prevEquipments => {
+      setEquipments((prevEquipments) => {
         const filtered = prevEquipments.filter(item => item.name != oldName);
         return [newEq, ...filtered];
       });
     });
     newSocket.on('deleteEquipment', (data: any) => {
       const {deletedName} = data;
-      setEquipments(prevEquipments => {
+      setEquipments((prevEquipments) => {
         return prevEquipments.filter(item => item.name !== deletedName);
-      })
+      });
+    });
+
+    //Issues
+    socket?.on('newIssue', data => {
+      setIssues((prev) => [data, ...prev]);
     });
   };
 
@@ -302,7 +325,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={issues.slice(0, 3)}
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>

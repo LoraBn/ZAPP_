@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -58,13 +59,14 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   const insets = useSafeAreaInsets();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
-   const {setSocket, socket, accessToken} = useUser(
+   const {setSocket, socket, accessToken, type} = useUser(
     state => state,
   );
 
   useEffect(() => {
     fetchAnnouncements();
     establishWebSocketConnection();
+    fetchIssues();
     return () => {
       if (socket != null) {
         socket.disconnect();
@@ -74,7 +76,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await client.get('/employee/announcements', {
+      const response = await client.get(`/${type}/announcements`, {
         headers: {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
@@ -85,6 +87,22 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     }
   };
 
+  const [issues, setIssues] = useState<Alert>([])
+  const fetchIssues = async ()=> {
+    try {
+      const responce = await client.get(`/${type}/issues`, {
+        headers:{
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      if(responce){
+        setIssues(responce.data.alert_ticket_list);
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   const establishWebSocketConnection = () => {
     const newSocket = io(ioString);
     setSocket(newSocket)
@@ -92,7 +110,13 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       console.log('New announcement received:', data);
       setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
     });
+
+    socket?.on('newIssue', data => {
+      setIssues((prev) => [data, ...prev]);
+    });
   };
+
+
 
   return (
     <ScrollView
@@ -146,7 +170,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={issues?.slice(0,3)}
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>
