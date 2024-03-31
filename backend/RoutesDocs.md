@@ -92,6 +92,10 @@ METHOD http://link-for-api-req {req parameters if any} => {response data} : {err
 
 - **Delete Bill** DELETE: /api/owner/bills/:id => {message} : {error_message}
 
+### Billing Cycle
+= **Start Billing** POST: /api/owner//billing-cycle/start => {cycleId, message} : {error_message}
+= **Stop Billing** POST: /api/owner//billing-cycle/stop => {cycleId, message} : {error_message}
+
 ### Expenses
 
 - **Get Expenses** GET: /api/owner/expenses => {expenses} : {error_message}

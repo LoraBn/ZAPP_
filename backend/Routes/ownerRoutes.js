@@ -58,6 +58,8 @@ const {
   updatePrice,
   deletePrice,
   getExpensesOfEmp,
+  startBilling,
+  stopBilling,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -158,6 +160,10 @@ module.exports = function (io) {
   router.post("/bills", authenticateOwnerToken, createBill);
   router.put("/bills/:id", authenticateOwnerToken, updateBill);
   router.delete("/bills/:id", authenticateOwnerToken, deleteBill);
+
+  //Billing cycle
+  router.post('/billing-cycle/start', authenticateOwnerToken, startBilling);
+  router.post('/billing-cycle/stop', authenticateOwnerToken, stopBilling)
 
   //expenses
   router.get("/expenses", authenticateOwnerToken, getExpenses);
