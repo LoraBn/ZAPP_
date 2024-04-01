@@ -119,6 +119,23 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     {value: 5, label: 'E', frontColor: '#9272b1'},
   ];
 
+  const [profit, setProfit] = useState<number>();
+  const fetchProfit = async () => {
+    try {
+      const responce = await client.get(`/${type}/profit`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (responce) {
+        setProfit(parseInt(responce.data.profit));
+        console.log(profit);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   //Equipments
 
   const fetchEquipments = async () => {
@@ -156,12 +173,20 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     fetchEmployees();
     fetchPlans();
     fetchIssues();
+    fetchTickets();
     return () => {
       if (socket != null) {
         socket.disconnect();
       }
     };
   }, []);
+
+  const [refresh, setRefresh] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetchProfit()
+    fetchPrice()
+  }, [refresh]);
 
   const fetchPlans = async () => {
     try {
@@ -187,6 +212,23 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       });
       if (responce) {
         setIssues(responce.data.alert_ticket_list);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [tickets, setTickets] = useState<any>([]);
+  const fetchTickets = async () => {
+    try {
+      const response = await client.get(`/${type}/tickets`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response) {
+        setTickets(response.data.support_ticket_list)
       }
     } catch (error) {
       console.log(error);
@@ -222,6 +264,22 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     }
   };
 
+  const [kwhPrice, setKwhPrice] = useState<string>('No Price');
+
+  const fetchPrice = async () => {
+    try {
+      const response = await client.get(`/${type}/price`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setKwhPrice(`${response.data.price.kwh_price}`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
   const establishWebSocketConnection = () => {
     const newSocket = io(ioString);
     setSocket(newSocket);
@@ -231,27 +289,41 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     });
     newSocket.on('newEquipment', (data: any) => {
       console.log('New equipmenet added:', data);
-      setEquipments((prevEquipments) => [data, ...prevEquipments]);
+      setEquipments(prevEquipments => [data, ...prevEquipments]);
     });
     newSocket.on('updateEquipment', (data: any) => {
       console.log('Im here');
       const {oldName, name, price, description, status} = data;
       const newEq = {name, price, description, status};
-      setEquipments((prevEquipments) => {
+      setEquipments(prevEquipments => {
         const filtered = prevEquipments.filter(item => item.name != oldName);
         return [newEq, ...filtered];
       });
     });
     newSocket.on('deleteEquipment', (data: any) => {
       const {deletedName} = data;
-      setEquipments((prevEquipments) => {
+      setEquipments(prevEquipments => {
         return prevEquipments.filter(item => item.name !== deletedName);
       });
     });
 
     //Issues
-    socket?.on('newIssue', data => {
-      setIssues((prev) => [data, ...prev]);
+    newSocket?.on('newIssue', data => {
+      setIssues(prev => [data, ...prev]);
+    });
+
+    newSocket.on('newExpense', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+    newSocket.on('updateExpense', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+    newSocket.on('deleteExpense', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+
+    newSocket.on('newBill', data => {
+      setRefresh(prev => !prev);
     });
   };
 
@@ -265,15 +337,15 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       <View style={styles.profitFeesContainer}>
         <Text style={styles.profitText}>Profit</Text>
         <WhiteCard style={styles.amountContainer}>
-          <Text style={styles.amountText}>$ 56666</Text>
+          <Text style={styles.amountText}>$ {profit ? profit : '0'} </Text>
         </WhiteCard>
-        <Text style={styles.profitText}>Fees</Text>
+        <Text style={styles.profitText}>Kwh Price</Text>
         <WhiteCard
           style={[
             styles.amountContainer,
             {backgroundColor: isPaid ? Colors.Green : Colors.White},
           ]}>
-          <Text style={styles.amountText}>{isPaid ? 'PAID' : '$ 100'}</Text>
+          <Text style={styles.amountText}>{kwhPrice}</Text>
         </WhiteCard>
       </View>
       <Card
@@ -346,7 +418,9 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={tickets.length ? 
+              tickets.slice(0,3) :
+            [{created_by: "NO TICKETS"}]}
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>

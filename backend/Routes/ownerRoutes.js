@@ -63,6 +63,7 @@ const {
   getPreviousMeter,
   calculateBill,
   checkActiveBillingCycle,
+  calculateProfit,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -130,8 +131,8 @@ module.exports = function (io) {
 
   //Kwh_prices
   router.get("/price", authenticateOwnerToken, getKwhPrice);
-  router.put("/price/",authenticateOwnerToken, updatePrice);
-  router.delete("/price/:id", authenticateOwnerToken, deletePrice)
+  router.put("/price/", authenticateOwnerToken, updatePrice);
+  router.delete("/price/:id", authenticateOwnerToken, deletePrice);
 
   //subscription plan
   router.get("/plans", authenticateOwnerToken, getPlans);
@@ -167,27 +168,29 @@ module.exports = function (io) {
   router.delete("/bills/:id", authenticateOwnerToken, deleteBill);
 
   //Billing cycle
-  router.get('/billing-cycle', authenticateOwnerToken, checkActiveBillingCycle)
-  router.post('/billing-cycle/start', authenticateOwnerToken, startBilling);
-  router.post('/billing-cycle/stop', authenticateOwnerToken, stopBilling)
+  router.get("/billing-cycle", authenticateOwnerToken, checkActiveBillingCycle);
+  router.post("/billing-cycle/start", authenticateOwnerToken, startBilling);
+  router.post("/billing-cycle/stop", authenticateOwnerToken, stopBilling);
 
   //Previous Meter;
-  router.get('/previous-meter/:id', authenticateOwnerToken, getPreviousMeter)
+  router.get("/previous-meter/:id", authenticateOwnerToken, getPreviousMeter);
+
+  router.get("/profit", authenticateOwnerToken, calculateProfit);
 
   //calculate Bill
-  router.post('/calculate-bill/:id', authenticateOwnerToken, calculateBill)
+  router.post("/calculate-bill/:id", authenticateOwnerToken, calculateBill);
 
   //expenses
   router.get("/expenses", authenticateOwnerToken, getExpenses);
 
   //id is employeeId
-  router.get("/expenses/:id", authenticateOwnerToken, getExpensesOfEmp)
+  router.get("/expenses/:id", authenticateOwnerToken, getExpensesOfEmp);
   router.post("/expenses", authenticateOwnerToken, createExpense);
   router.put("/expenses/:id", authenticateOwnerToken, updateExpense);
   router.delete("/expenses/:id", authenticateOwnerToken, deleteExpense);
 
   //Support_tickets
-  router.get("/ticket", authenticateOwnerToken, getAllSupportTickets);
+  router.get("/tickets", authenticateOwnerToken, getAllSupportTickets);
   router.get("/ticket/open", authenticateOwnerToken, getAllOpenTickets);
   router.get("/ticket/close", authenticateOwnerToken, getAllClosedTickets);
   router.get("/ticket/:id", authenticateOwnerToken, getSupportTicket);

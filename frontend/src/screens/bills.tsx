@@ -1,14 +1,17 @@
 import {SectionList, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import {StackScreenProps} from '@react-navigation/stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import ScreenHeader from '../components/ui/screen-header';
 import ListSeperator from '../components/ui/list-seperator';
 import {BillingStackNavigatorParams} from '../navigation/billing-stack-navigation';
-import {Bill, DUMMY_BILLS} from './bills-nav-page';
+import {DUMMY_BILLS} from './bills-nav-page';
 import {getMonthAndYear} from '../utils/date-utils';
 import BillsItem from '../components/ui/bills-item';
+import client from '../API/client';
+import {useUser} from '../storage/use-user';
+import {Bill} from './user-details-screen';
 
 type ExpensesProps = StackScreenProps<BillingStackNavigatorParams, 'Bills'>;
 
@@ -17,29 +20,49 @@ function formatBillsSections(bills: Bill[]) {
 
   let dates: Record<string, number> = {};
 
-  let index = 0;
-
   for (let i = 0; i < bills.length; i++) {
-    const monthAndYear = getMonthAndYear(bills[i].date);
-
+    const monthAndYear = getMonthAndYear(new Date(bills[i].billing_date));
     const monthAndYearFromHashMap = dates[monthAndYear];
 
     if (monthAndYearFromHashMap !== undefined) {
-      finalBills[monthAndYearFromHashMap]?.data.push(bills[i]);
+      finalBills[monthAndYearFromHashMap].data.push(bills[i]);
     } else {
-      dates[monthAndYear] = index;
-      finalBills[index] = {data: [bills[i]], title: monthAndYear};
-      index++;
+      dates[monthAndYear] = finalBills.length;
+      finalBills.push({data: [bills[i]], title: monthAndYear});
     }
   }
 
   return finalBills;
 }
 
-const Expenses = ({}: ExpensesProps) => {
+const Expenses = ({}) => {
   const insets = useSafeAreaInsets();
 
-  const bills = formatBillsSections(DUMMY_BILLS);
+  const {type, accessToken} = useUser(state => state);
+
+  const [bills, setBills] = useState<any>([]);
+
+  const fetchAllBills = async () => {
+    try {
+      const responce = await client.get(`/${type}/bills`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (responce) {
+        const formated = formatBillsSections(responce.data.bills);
+        setBills(formated);
+        console.log(bills);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllBills();
+  }, []);
 
   return (
     <View style={styles.screen}>
@@ -47,24 +70,26 @@ const Expenses = ({}: ExpensesProps) => {
       <View
         style={[styles.historyContainer, {marginBottom: insets.bottom + 25}]}>
         <View style={styles.whiteCardStyle}>
-          <SectionList
-            sections={bills}
-            ItemSeparatorComponent={ListSeperator}
-            renderSectionHeader={({section: {title}}) => (
-              <Text style={styles.text}>{title}</Text>
-            )}
-            renderItem={props => <BillsItem {...props} />}
-          />
+          {bills.length > 0 ? (
+            <SectionList
+              sections={bills}
+              ItemSeparatorComponent={ListSeperator}
+              renderSectionHeader={({section: {title}}) => (
+                <Text style={styles.text}>{title}</Text>
+              )}
+              renderItem={props => <BillsItem {...props} />}
+            />
+          ) : (
+            <Text>No bills available</Text>
+          )}
         </View>
       </View>
     </View>
   );
 };
 
-export default Expenses;
-
 const styles = StyleSheet.create({
-  text: {color: Colors.Black, textAlign: 'center', fontSize: 16},
+  text: {color: Colors.Black, textAlign: 'center', fontSize: 21, padding: 10},
   whiteCardStyle: {
     flex: 1,
     padding: 10,
@@ -107,3 +132,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export default Expenses;

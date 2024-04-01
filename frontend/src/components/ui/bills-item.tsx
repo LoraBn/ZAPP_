@@ -1,8 +1,8 @@
 import {StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {Colors} from '../../utils/colors';
-import {Bill} from '../../screens/bills-nav-page';
 import {formatDate} from '../../utils/date-utils';
+import { Bill } from '../../screens/user-details-screen';
 
 type BillsItemProps = {
   item: Bill;
@@ -12,11 +12,11 @@ type BillsItemProps = {
 const BillsItem = ({item}: BillsItemProps) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>{item.user.name}</Text>
-      <Text style={styles.alertText}>{item.status}</Text>
+      <Text style={styles.userText}>{item.username}</Text>
+      <Text style={styles.alertText}>{item.billing_status}</Text>
       <View>
-        <Text style={styles.alertText}>{`$ ${item.amount}`}</Text>
-        <Text style={styles.alertText}>{formatDate(item.date)}</Text>
+        <Text style={styles.alertText}>{`$ ${item.total_amount}`}</Text>
+        <Text style={styles.alertText}>{formatDate(item.billing_date)}</Text>
       </View>
     </View>
   );

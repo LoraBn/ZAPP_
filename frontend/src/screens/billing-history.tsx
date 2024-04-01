@@ -1,11 +1,14 @@
 import {FlatList, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import ScreenHeader from '../components/ui/screen-header';
 import Card from '../components/ui/card';
 import {DUMMY_BILLS} from './bills-nav-page';
 import BillListItem from '../components/ui/bill-list-item';
 import ListSeperator from '../components/ui/list-seperator';
+import { Bill } from './user-details-screen';
+import { useUser } from '../storage/use-user';
+import client from '../API/client';
 
 type DUMMY_FILTERS = string[];
 
@@ -13,6 +16,32 @@ const DUMMY_FILT = ['Pending', 'Paid', 'Date'];
 
 const BillingHistory = () => {
   const [filters, setFilters] = useState<DUMMY_FILTERS>([]);
+
+  const [bills, setBills] = useState<Bill>();
+
+  const {type, accessToken} = useUser(state => state)
+
+  useEffect(()=>{
+    fetchAllBills()
+  }, [])
+
+
+  const fetchAllBills = async () => {
+    try {
+      const responce = await client.get(`${type}/bills`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (responce) {
+        setBills(responce.data.bills);
+        console.log(bills)
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -39,7 +68,7 @@ const BillingHistory = () => {
         ))}
       </View>
       <FlatList
-        data={DUMMY_BILLS}
+        data={[bills]}
         ItemSeparatorComponent={ListSeperator}
         contentContainerStyle={styles.flatlistContentContainer}
         renderItem={props => <BillListItem {...props} />}

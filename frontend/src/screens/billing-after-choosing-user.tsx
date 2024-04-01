@@ -76,10 +76,10 @@ const BillingAfterChoosingUser = ({
         contentContainerStyle={[styles.containerStyle, styles.gap15]}>
         <View style={styles.topTextContainer}>
           <Text style={styles.nameText}>
-            {user?.name} <Text style={styles.idText}>#{user?.id}</Text>
+            {user?.name} <Text style={styles.idText}>#{user?.customer_id}</Text>
           </Text>
           <Text style={styles.dateJoinedText}>
-            Date Of Bill - {formatDate(user?.date_joined)}
+            Date Of Bill - {formatDate(user?.created_at)}
           </Text>
         </View>
         <View style={styles.accountsUserNameContainer}>

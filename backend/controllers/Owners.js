@@ -1104,7 +1104,19 @@ const getAllBills = async (req, res) => {
   try {
     const ownerId = req.user.userId;
 
-    const queryText = "SELECT * FROM bills WHERE owner_id = $1";
+    const queryText = `
+      SELECT 
+          b.*, 
+          c.username
+      FROM 
+          bills b
+      INNER JOIN 
+          customers c ON b.customer_id = c.customer_id
+      WHERE 
+          c.owner_id = $1
+      ORDER BY 
+          b.billing_date DESC
+    `;
     const result = await pool.query(queryText, [ownerId]);
 
     res.status(200).json({ bills: result.rows });
@@ -1113,6 +1125,7 @@ const getAllBills = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getCustomerBill = async (req, res) => {
   try {
@@ -1303,10 +1316,10 @@ const createBill = async (req, res) => {
       await pool.query(updateCustomerQuery, [customerId]);
 
       let room = `all${ownerId}`;
-      req.app
-        .get("io")
-        .to(room)
-        .emit("newBill", { customer_id: customerId, bill_info: result.rows[0] });
+      req.app.get("io").to(room).emit("newBill", {
+        customer_id: customerId,
+        bill_info: result.rows[0],
+      });
       res.status(201).json({
         bill_info: result.rows[0],
         message: "Bill created successfully!",
@@ -1342,6 +1355,76 @@ const getPreviousMeter = async (req, res) => {
 
     // You might want to send the previousMeter value in the response
     res.status(200).json({ previousMeter });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const calculateProfit = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    // Fetch all bills for all customers under the owner
+    const billsQuery = `
+    WITH LatestBill AS (
+      SELECT 
+          b.customer_id,
+          MAX(b.bill_id) AS latest_bill_id,
+          (SELECT SUM(total_amount) FROM bills WHERE customer_id = b.customer_id AND bill_id = MAX(b.bill_id)) AS remaining_amount
+      FROM 
+          bills b
+      GROUP BY 
+          b.customer_id
+  )
+  SELECT 
+      b.customer_id,
+      MAX(b.bill_id) AS latest_bill,
+      SUM(b.total_amount) - MAX(lb.remaining_amount) AS total_profit
+  FROM 
+      bills b
+  INNER JOIN 
+      customers c ON b.customer_id = c.customer_id
+  INNER JOIN 
+      LatestBill lb ON b.customer_id = lb.customer_id
+  WHERE 
+      c.owner_id = $1
+  GROUP BY 
+      b.customer_id;    
+    `;
+
+    const billsResult = await pool.query(billsQuery, [ownerId]);
+    const totalProfitFromBills = billsResult.rows.reduce(
+      (acc, curr) => acc + curr.total_profit,
+      0
+    );
+
+    // Fetch expenses paid in the current month
+    const currentMonth = new Date().getMonth() + 1; // Month is 0-indexed in JavaScript
+    const currentYear = new Date().getFullYear();
+    const expensesQuery = `
+      SELECT 
+        SUM(amount) AS total_expenses
+      FROM 
+        expenses
+      WHERE 
+        owner_id = $1
+      AND 
+        EXTRACT(MONTH FROM expense_date) = $2
+      AND 
+        EXTRACT(YEAR FROM expense_date) = $3
+    `;
+    const expensesResult = await pool.query(expensesQuery, [
+      ownerId,
+      currentMonth,
+      currentYear,
+    ]);
+    const totalExpenses = expensesResult.rows[0].total_expenses || 0;
+
+    // Calculate profit
+    const profit = totalProfitFromBills - totalExpenses;
+
+    res.status(200).json({ profit });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error_message: "Internal Server Error" });
@@ -1491,8 +1574,8 @@ const startBilling = async (req, res) => {
       WHERE owner_id = $1`;
     await pool.query(updateCustomersQuery, [ownerId]);
 
-    let room = `emp${ownerId}`
-    req.app.get('io').to(room).emit('refreshCycle',{cycleId,ownerId})
+    let room = `emp${ownerId}`;
+    req.app.get("io").to(room).emit("refreshCycle", { cycleId, ownerId });
 
     res
       .status(200)
@@ -1521,9 +1604,9 @@ const stopBilling = async (req, res) => {
 
     const cycleId = rows[0].cycle_id;
 
-    let room = `emp${ownerId}`
-    req.app.get('io').to(room).emit('refreshCycle',{cycleId,ownerId})
-    
+    let room = `emp${ownerId}`;
+    req.app.get("io").to(room).emit("refreshCycle", { cycleId, ownerId });
+
     res
       .status(200)
       .json({ cycleId, message: "Billing cycle stopped successfully." });
@@ -1793,8 +1876,6 @@ const createSupportTicket = async (req, res) => {
     const ownerId = req.user.userId;
     const { customer_username, ticket_message, is_urgent } = req.body;
 
-    const createdByOnwer = true;
-
     // Get the customer and employee IDs associated with the provided usernames and owner ID
     const customerId = await getCustomerIdForOwner(ownerId, customer_username);
 
@@ -1804,7 +1885,7 @@ const createSupportTicket = async (req, res) => {
         .json({ error_message: "Error finding the customer" });
     }
 
-    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent, created_by_owner) 
+    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent) 
       VALUES($1, $2, $3, $4)`;
 
     const result = await pool.query(queryText, [
@@ -1812,7 +1893,6 @@ const createSupportTicket = async (req, res) => {
       customerId,
       ticket_message,
       is_urgent,
-      createdByOnwer,
     ]);
 
     if (result.rows.length > 0) {
@@ -1976,10 +2056,48 @@ const getAllSupportTickets = async (req, res) => {
     const ownerId = req.user.userId;
 
     // Retrieve all support tickets for the provided owner
-    const ticketsQuery = "SELECT * FROM support_tickets WHERE owner_id = $1";
+    const ticketsQuery = `
+      SELECT s.ticket_id, s.owner_id, s.customer_id, c.username AS customer_username, o.username AS owner_username, s.ticket_message,
+             s.is_closed, s.created_at
+      FROM support_tickets s
+      JOIN owners o ON s.owner_id = o.owner_id
+      LEFT JOIN customers c ON s.customer_id = c.customer_id
+      LEFT JOIN owners co ON s.owner_id = co.owner_id
+      WHERE s.owner_id = $1
+      ORDER BY s.created_at DESC
+    `;
     const ticketsResult = await pool.query(ticketsQuery, [ownerId]);
 
-    const supportTicketList = ticketsResult.rows;
+    const supportTicketList = [];
+    for (const ticket of ticketsResult.rows) {
+      // Fetch replies for each ticket from both owners and customers
+      const repliesQuery = `
+        SELECT sr.reply_text, 
+               CASE 
+                 WHEN sr.isSentByOwner THEN o.username
+                 ELSE c.username
+               END AS sender_username
+        FROM support_tickets_replies sr
+        LEFT JOIN owners o ON sr.owner_id = o.owner_id
+        LEFT JOIN customers c ON sr.customer_id = c.customer_id
+        WHERE sr.ticket_id = $1
+      `;
+      const repliesResult = await pool.query(repliesQuery, [ticket.ticket_id]);
+      const replies = repliesResult.rows;
+
+      const supportTicket = {
+        ticket_id: ticket.ticket_id,
+        owner_id: ticket.owner_id,
+        customer_id: ticket.customer_id,
+        created_by: ticket.customer_username,
+        owner_username: ticket.owner_username,
+        ticket_message: ticket.ticket_message,
+        is_closed: ticket.is_closed,
+        created_at: ticket.created_at,
+        replies: replies.reverse(), // Reverse the order of replies to match the structure
+      };
+      supportTicketList.push(supportTicket);
+    }
 
     res.status(200).json({ support_ticket_list: supportTicketList });
   } catch (error) {
@@ -1987,6 +2105,7 @@ const getAllSupportTickets = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getAllOpenTickets = async (req, res) => {
   try {
@@ -2654,6 +2773,7 @@ module.exports = {
   deleteElectricSchedule,
   getAllBills,
   getCustomerBill,
+  calculateProfit,
   createBill,
   updateBill,
   deleteBill,

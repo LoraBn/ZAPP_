@@ -2,7 +2,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import React, {useState} from 'react';
 import {Colors} from '../../utils/colors';
 import {formatDate} from '../../utils/date-utils';
-import {Bill} from '../../screens/bills-nav-page';
+import { Bill } from '../../screens/user-details-screen';
 
 type BillListItemProps = {
   item: Bill;
@@ -18,9 +18,9 @@ const BillListItem = ({item}: BillListItemProps) => {
       style={styles.container}
       onPress={() => setIsVisible(prevIsVisible => !prevIsVisible)}>
       <View style={styles.titleContainer}>
-        <Text style={[styles.text, styles.bold]}>{item.status}</Text>
-        <Text style={styles.text}>{formatDate(item.date)}</Text>
-        <Text style={styles.text}>$ {item.amount}</Text>
+        <Text style={[styles.text, styles.bold]}>{item.billing_status}</Text>
+        <Text style={styles.text}>{formatDate(item.billing_date)}</Text>
+        <Text style={styles.text}>$ {item.total_amount}</Text>
       </View>
       {isVisible && (
         <View>

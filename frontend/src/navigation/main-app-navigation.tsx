@@ -46,7 +46,7 @@ export default function MainStackNavigation() {
       }
     };
     fetchData();
-  }, [setAccessToken, setType]); // Added dependencies
+  }, []);
   
   
 

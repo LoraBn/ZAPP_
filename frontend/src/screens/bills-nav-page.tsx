@@ -129,7 +129,27 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
     } catch (error) {}
   };
 
+  const [bills, setBills] = useState<any>([]);
+
+  const fetchAllBills = async () => {
+    try {
+      const responce = await client.get(`/${type}/bills`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (responce) {
+        setBills(responce.data.bills);
+        console.log(bills);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
+    fetchAllBills();
     fetchEquipments();
     fetchExpense();
     fetchPlans(), 
@@ -199,9 +219,11 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         });
       });
       socket.on('deleteExpense', (data: any) => {
-        const { deletedId } = data;
+        const {deletedId} = data;
         setExpenses(prevExpenses => {
-          const updatedExpenses = prevExpenses.filter(item => item.expense_id != deletedId);
+          const updatedExpenses = prevExpenses.filter(
+            item => item.expense_id != deletedId,
+          );
           return updatedExpenses;
         });
       });
@@ -285,7 +307,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_BILLS}
+              data={bills.slice(0,3)}
               scrollEnabled={false}
               renderItem={BillsItem}
               ListFooterComponent={() =>

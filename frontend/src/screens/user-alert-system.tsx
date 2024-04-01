@@ -125,6 +125,7 @@ const UserAlertSystem = () => {
 
   useEffect(() => {
     fetchIssues();
+    fetchTickets()
   }, [usersType]);
 
   useEffect(() => {
@@ -132,6 +133,27 @@ const UserAlertSystem = () => {
   }, []);
 
   const [sections, setSections] = useState<ALERT[] | undefined>(undefined);
+
+  const [sections2, setSections2] = useState<ALERT[] | undefined>(undefined);
+
+  const fetchTickets = async () => {
+    try {
+      const response = await client.get(`/${userType}/tickets`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response) {
+        const alertTicketList: ALERT[] = response.data.support_ticket_list;
+        const formattedSections = formatAlertsForSectionList(alertTicketList);
+        setSections2(formattedSections);
+        console.log('success', sections);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   // Change the fetchIssues function to update the sections state:
   const fetchIssues = async () => {
@@ -317,12 +339,12 @@ const UserAlertSystem = () => {
           <Text style={styles.text}>{'Create Alert'}</Text>
         </Pressable>
 
-        {sections && (
+        {sections2 && (
           <SectionList
             sections={
               usersType === 'employees' || userType === 'employee'
                 ? sections
-                : ''
+                : sections2
             }
             ListHeaderComponent={() =>
               isCreatingAlert ? (
