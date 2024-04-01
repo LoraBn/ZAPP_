@@ -1,4 +1,5 @@
 import {
+  Alert,
   FlatList,
   Keyboard,
   Pressable,
@@ -41,6 +42,7 @@ export interface User {
   profile_picture: string | null;
   created_at: Date;
   phone_number: number;
+  is_cycled: boolean;
 }
 
 export interface Employee {
@@ -149,7 +151,48 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
     }
   };
 
+  const fetchBillingCycle = async () => {
+    try {
+      const response = await client.get(`/${userType}/billing-cycle`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response && response.data) {
+        setIsBilling(!!response.data.cycleId);
+      }
+    } catch (error) {
+      console.error(error);
+      // Handle error appropriately, maybe show an alert or set a default value for isBilling
+    }
+  };
+  
+  const HandleBilling = async () => {
+    try {
+      let endpoint;
+      if (!isBilling) {
+        endpoint = `/${userType}/billing-cycle/start`;
+      } else {
+        endpoint = `/${userType}/billing-cycle/stop`;
+      }
+      console.log(endpoint);
+      const response = await client.post(endpoint, null, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response && response.data) {
+        setIsBilling(prev => !prev);
+        Alert.alert(response.data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert(response?.data?.message)
+    }
+  };
+  
   useEffect(() => {
+    fetchBillingCycle();
     fetchUsers();
     establishWebSocketConnection();
   }, [usersType]);
@@ -175,7 +218,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       }}>
       <View style={styles.topItemsContainer}>
         <Pressable
-          onPress={() => setIsBilling(prevIsBilling => !prevIsBilling)}
+          onPress={() => HandleBilling()}
           style={[
             styles.elevatedCardBillingStyle,
             {marginTop: insets.top + 15},

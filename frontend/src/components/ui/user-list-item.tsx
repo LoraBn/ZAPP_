@@ -30,7 +30,7 @@ const UserListItem = ({item, isBilling}: UserListItemProps) => {
         <View
           style={[
             styles.isBillingView,
-            {backgroundColor: isPending ? Colors.Red : Colors.Green},
+            {backgroundColor: item.is_cycled ? Colors.Red : Colors.Green},
           ]}
         />
       )}

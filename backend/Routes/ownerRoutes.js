@@ -60,6 +60,9 @@ const {
   getExpensesOfEmp,
   startBilling,
   stopBilling,
+  getPreviousMeter,
+  calculateBill,
+  checkActiveBillingCycle,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -156,14 +159,23 @@ module.exports = function (io) {
 
   //Bills
   router.get("/bills", authenticateOwnerToken, getAllBills);
-  router.get("/bills/:username", authenticateOwnerToken, getCustomerBill);
-  router.post("/bills", authenticateOwnerToken, createBill);
+  router.get("/bills/:id", authenticateOwnerToken, getCustomerBill);
+  //the Id is for the customer here
+  router.post("/bills/:id", authenticateOwnerToken, createBill);
+  //the id is for the bill here
   router.put("/bills/:id", authenticateOwnerToken, updateBill);
   router.delete("/bills/:id", authenticateOwnerToken, deleteBill);
 
   //Billing cycle
+  router.get('/billing-cycle', authenticateOwnerToken, checkActiveBillingCycle)
   router.post('/billing-cycle/start', authenticateOwnerToken, startBilling);
   router.post('/billing-cycle/stop', authenticateOwnerToken, stopBilling)
+
+  //Previous Meter;
+  router.get('/previous-meter/:id', authenticateOwnerToken, getPreviousMeter)
+
+  //calculate Bill
+  router.post('/calculate-bill/:id', authenticateOwnerToken, calculateBill)
 
   //expenses
   router.get("/expenses", authenticateOwnerToken, getExpenses);

@@ -1117,9 +1117,7 @@ const getAllBills = async (req, res) => {
 const getCustomerBill = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const username = req.params.username;
-
-    const customerId = await getCustomerIdForOwner(ownerId, username);
+    const customerId = req.params.id;
 
     if (!customerId) {
       return res.status(404).json({ error_message: "Customer not found" });
@@ -1127,58 +1125,21 @@ const getCustomerBill = async (req, res) => {
 
     // Your query to get the bill for the specified customer
     const queryText =
-      "SELECT * FROM bills WHERE owner_id = $1 AND customer_id = $2";
+      "SELECT * FROM bills WHERE owner_id = $1 AND customer_id = $2 ORDER BY billing_date DESC";
     const result = await pool.query(queryText, [ownerId, customerId]);
 
-    res.status(200).json({ bill: result.rows[0] });
+    res.status(200).json({ bills: result.rows });
   } catch (error) {
     console.error("Error fetching customer bill:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
 
-const createBill = async (req, res) => {
+const calculateBill = async (req, res) => {
   try {
+    const customerId = req.params.id;
     const ownerId = req.user.userId;
-    const {
-      customerUsername,
-      current_meter,
-      total_amount,
-      billing_status,
-      remaining_amount,
-    } = req.body;
-
-    const customerId = await getCustomerIdForOwner(ownerId, customerUsername);
-
-    if (!customerId) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the customer" });
-    }
-
-    const activeCycleQuery = `
-      SELECT cycle_id
-      FROM billing_cycle
-      WHERE owner_id = $1
-      AND started_at <= CURRENT_TIMESTAMP
-      AND (ended_at IS NULL OR ended_at >= CURRENT_TIMESTAMP)
-    `;
-    const activeCycleResult = await pool.query(activeCycleQuery, [ownerId]);
-    if (activeCycleResult.rows.length === 0) {
-      return res.status(400).json({ error_message: "No active billing cycle found or current date is not within the cycle's time frame." });
-    }
-    const cycleId = activeCycleResult.rows[0].cycle_id;
-
-    const existingBillQuery = `
-      SELECT COUNT(*) AS bill_count
-      FROM bills
-      WHERE customer_id = $1
-      AND cycle_id = $2
-    `;
-    const existingBillResult = await pool.query(existingBillQuery, [customerId, cycleId]);
-    if (existingBillResult.rows[0].bill_count > 0) {
-      return res.status(400).json({ error_message: "A bill already exists for the customer in the current billing cycle." });
-    }
+    const { current_meter } = req.body;
 
     const planQuery = `
       SELECT plan_price
@@ -1231,22 +1192,89 @@ const createBill = async (req, res) => {
       previousMeter = req.body.previous_meter;
     }
 
-    const total_kwh = current_meter - previousMeter;
-
     const remainingAmountQuery = `
-      SELECT SUM(remaining_amount) AS total_remaining_amount
+      SELECT remaining_amount
       FROM bills
-      WHERE customer_id = $1
+      WHERE customer_id = $1 AND owner_id = $2
+      ORDER BY billing_date DESC
+      LIMIT 1
     `;
     const remainingAmountResult = await pool.query(remainingAmountQuery, [
       customerId,
+      ownerId,
     ]);
 
-    const total_remaining_amount =
-      parseFloat(remainingAmountResult.rows[0].total_remaining_amount) || 0;
+    let remainingAmount = 0;
+    if (remainingAmountResult.rows.length > 0) {
+      remainingAmount = remainingAmountResult.rows[0].remaining_amount;
+    }
+
+    const total_kwh = current_meter - previousMeter;
 
     const total_amount_calculated =
-      total_kwh * kWhPrice + planPrice + total_remaining_amount;
+      total_kwh * kWhPrice + planPrice + parseFloat(remainingAmount);
+
+    res.status(201).json({
+      bill_info: {
+        total_kwh,
+        plan_price: planPrice,
+        kwh_price: kWhPrice,
+        total_amount_calculated,
+      },
+      message: "Bill calculated successfully!",
+    });
+  } catch (error) {
+    console.error("Error calculating bill:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const createBill = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const customerId = req.params.id;
+    const {
+      current_meter,
+      total_kwh,
+      total_amount,
+      amount_paid, // Added to retrieve from request body
+    } = req.body;
+
+    const activeCycleQuery = `
+      SELECT cycle_id
+      FROM billing_cycle
+      WHERE owner_id = $1
+      AND started_at <= CURRENT_TIMESTAMP
+      AND (ended_at IS NULL OR ended_at >= CURRENT_TIMESTAMP)
+    `;
+    const activeCycleResult = await pool.query(activeCycleQuery, [ownerId]);
+    if (activeCycleResult.rows.length === 0) {
+      return res.status(400).json({
+        error_message:
+          "No active billing cycle found or current date is not within the cycle's time frame.",
+      });
+    }
+    const cycleId = activeCycleResult.rows[0].cycle_id;
+
+    const existingBillQuery = `
+      SELECT COUNT(*) AS bill_count
+      FROM bills
+      WHERE customer_id = $1
+      AND cycle_id = $2
+    `;
+    const existingBillResult = await pool.query(existingBillQuery, [
+      customerId,
+      cycleId,
+    ]);
+    if (existingBillResult.rows[0].bill_count > 0) {
+      return res.status(400).json({
+        error_message:
+          "A bill already exists for the customer in the current billing cycle.",
+      });
+    }
+
+    const remaining_amount = total_amount - amount_paid;
+    const billing_status = remaining_amount > 0 ? "PARTIAL" : "PAID";
 
     const queryText = `
       INSERT INTO bills(customer_id, owner_id, previous_meter, current_meter, total_kwh, total_amount, billing_status, remaining_amount, billing_date, cycle_id)
@@ -1257,10 +1285,10 @@ const createBill = async (req, res) => {
     const result = await pool.query(queryText, [
       customerId,
       ownerId,
-      previousMeter,
+      req.body.previous_meter,
       current_meter,
       total_kwh,
-      total_amount_calculated,
+      total_amount,
       billing_status,
       remaining_amount,
       cycleId,
@@ -1274,6 +1302,11 @@ const createBill = async (req, res) => {
       `;
       await pool.query(updateCustomerQuery, [customerId]);
 
+      let room = `all${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("newBill", { customer_id: customerId, bill_info: result.rows[0] });
       res.status(201).json({
         bill_info: result.rows[0],
         message: "Bill created successfully!",
@@ -1287,6 +1320,33 @@ const createBill = async (req, res) => {
   }
 };
 
+const getPreviousMeter = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const customerId = req.params.id; // corrected typo in variable name
+    let previousMeter;
+    const latestBillQuery = `
+      SELECT current_meter
+      FROM bills
+      WHERE customer_id = $1
+      ORDER BY billing_date DESC
+      LIMIT 1
+    `;
+    const latestBillResult = await pool.query(latestBillQuery, [customerId]); // corrected typo in variable name
+
+    if (latestBillResult.rows.length > 0) {
+      previousMeter = latestBillResult.rows[0].current_meter;
+    } else {
+      previousMeter = null;
+    }
+
+    // You might want to send the previousMeter value in the response
+    res.status(200).json({ previousMeter });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
 
 const updateBill = async (req, res) => {
   try {
@@ -1461,6 +1521,35 @@ const stopBilling = async (req, res) => {
     res
       .status(200)
       .json({ cycleId, message: "Billing cycle stopped successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error_message: "Server Error" });
+  }
+};
+
+const checkActiveBillingCycle = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    // Check if there is any active billing cycle for the owner
+    const queryText = `
+      SELECT cycle_id
+      FROM billing_cycle
+      WHERE owner_id = $1
+      AND started_at <= CURRENT_TIMESTAMP
+      AND (ended_at IS NULL OR ended_at >= CURRENT_TIMESTAMP)
+      LIMIT 1`;
+    const { rows } = await pool.query(queryText, [ownerId]);
+
+    if (rows.length === 0) {
+      return res
+        .status(206)
+        .json({ message: "No active billing cycle found for this owner." });
+    }
+
+    const cycleId = rows[0].cycle_id;
+
+    res.status(200).json({ cycleId, message: "Active billing cycle found." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error_message: "Server Error" });
@@ -2562,8 +2651,11 @@ module.exports = {
   createBill,
   updateBill,
   deleteBill,
+  calculateBill,
+  getPreviousMeter,
   startBilling,
   stopBilling,
+  checkActiveBillingCycle,
   getExpenses,
   getExpensesOfEmp,
   createExpense,

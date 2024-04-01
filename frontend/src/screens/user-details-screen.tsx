@@ -1,4 +1,5 @@
 import {
+  Alert,
   Dimensions,
   Image,
   Pressable,
@@ -8,7 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ImageStrings} from '../assets/image-strings';
@@ -26,6 +27,11 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import CarouselIndicators from '../components/ui/carousel-indicators';
+import client from '../API/client';
+import {useUser} from '../storage/use-user';
+import BillItem from '../components/ui/bill-item';
+import {chunkArray} from './employee-details-screen';
+import {ioString} from '../API/io';
 
 type UserDetailsScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -39,72 +45,22 @@ export type Payment = {
   amount: number;
 };
 
-export const DUMMY_PAYMENTS: Payment[] = [
-  {
-    id: 1,
-    date: new Date('2024-01-24'),
-    status: 'To be Paid',
-    total: 200,
-  },
-  {
-    id: 2,
-    date: new Date('2024-01-24'),
-    status: 'Pending',
-    total: 100,
-  },
-  {
-    id: 3,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 4,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 5,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-];
-export const DUMMY_PAYMENTS_2: Payment[] = [
-  {
-    id: 10,
-    date: new Date('2024-01-24'),
-    status: 'To be Paid',
-    total: 200,
-  },
-  {
-    id: 11,
-    date: new Date('2024-01-24'),
-    status: 'Pending',
-    total: 100,
-  },
-  {
-    id: 12,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 13,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-  {
-    id: 14,
-    date: new Date('2024-01-24'),
-    status: 'Paid',
-    total: 100,
-  },
-];
+export type Bill = {
+  bill_id: number;
+  customer_id: number;
+  owner_id: number;
+  previous_meter: string;
+  current_meter: string;
+  total_kwh: string;
+  total_amount: string;
+  billing_status: string;
+  remaining_amount: string;
+  billing_date: Date;
+  cycle_id: number;
+};
 
 type AddBillForm = {
+  previousMeter: string;
   currentMeter: string;
   amountPaid: string;
 };
@@ -119,12 +75,68 @@ const UserDetailsScreen = ({
 
   const insets = useSafeAreaInsets();
 
-  const {control, reset, handleSubmit} = useForm<AddBillForm>({
+  const {type, accessToken, socket, setSocket} = useUser(state => state);
+  const [previousMeter, setPreviousMeter] = useState<number | null>(null); // State to hold previous meter value
+
+  const {control, reset, handleSubmit, setValue} = useForm<AddBillForm>({
     defaultValues: {
       amountPaid: '0',
       currentMeter: '0',
+      previousMeter: '0',
     },
   });
+
+  useEffect(() => {
+    fetchPreviousMeter();
+    fetchAllBills();
+    establishWebSocketConnection();
+  }, []);
+
+  const fetchPreviousMeter = async () => {
+    try {
+      const response = await client.get(
+        `${type}/previous-meter/${user.customer_id}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      if (response.data) {
+        console.log('Success', response.data.previousMeter);
+        setPreviousMeter(response.data.previousMeter);
+        setValue('previousMeter', response.data.previousMeter);
+      } else {
+        setPreviousMeter(0);
+        setValue('previousMeter', 'Not Found'); // No previous meter available
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [bills, setBills] = useState<Bill>();
+  const [chunckedBills, setChunkedBills] = useState<any>([]);
+
+  const [billInfo, setBillInfo] = useState<any>([]);
+
+  const fetchAllBills = async () => {
+    try {
+      const responce = await client.get(`${type}/bills/${user.customer_id}`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (responce) {
+        setBills(responce.data.bills);
+        const chunckedBills = chunkArray(responce.data.bills, 4);
+        setChunkedBills(chunckedBills);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const scrollOffsetX = useSharedValue(0);
 
@@ -134,13 +146,95 @@ const UserDetailsScreen = ({
     scrollOffsetX.value = contentOffset.x / (width - 61);
   });
 
-  function onSubmit(data: AddBillForm) {
+  async function onSubmit(data: AddBillForm) {
     //HERE
     console.log(data);
 
     // SUCCESS? OR React QUEry Or RTK :)
     setIsAdding(false);
-    reset();
+
+    try {
+      const response = await client.post(
+        `/${type}/bills/${user.customer_id}`,
+        {
+          current_meter: data.currentMeter,
+          total_kwh: billInfo.total_kwh,
+          total_amount: billInfo.total_amount_calculated,
+          amount_paid: data.amountPaid,
+          previous_meter: data.previousMeter,
+        },
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (response) {
+        console.log(response.data);
+      }
+    } catch (error) {
+      // Extract error message from server response
+      const errorMessage =
+        error.response?.data?.error_message || 'An error occurred';
+
+      // Display error message in an alert
+      Alert.alert('Error', errorMessage);
+    }
+
+    if (!isAdding) {
+      reset();
+      setBillInfo('');
+    } else {
+      setPreviousMeter(null);
+      setBillInfo('');
+    }
+  }
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('Creating new socket');
+    }
+  
+    if (socket) {
+      socket.on("newBill", (data) => {
+        console.log('New bill received:', data);
+        if (user.customer_id === data.customer_id) {
+          // Add the new bill to the beginning of the bills array
+          setBills((prevBills) => [data.bill_info, ...prevBills]);
+          // Chunk the updated bills array
+          const chunkedBills1 = chunkArray([data.bill_info, ...bills], 4);
+          setChunkedBills(chunkedBills1);
+          console.log(chunckedBills)
+        }
+      });
+    }
+  };
+  
+  
+
+  async function onCalulate(data: AddBillForm) {
+    console.log(data);
+    try {
+      const responce = await client.post(
+        `/${type}/calculate-bill/${user.customer_id}`,
+        {current_meter: data.currentMeter, previous_meter: data.previousMeter},
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (responce) {
+        console.log(responce.data);
+        setBillInfo(responce.data.bill_info);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
@@ -164,7 +258,8 @@ const UserDetailsScreen = ({
         ]}>
         <View style={styles.topTextContainer}>
           <Text style={styles.nameText}>
-            {user.username} <Text style={styles.idText}>#{user.customer_id}</Text>
+            {user.username}{' '}
+            <Text style={styles.idText}>#{user.customer_id}</Text>
           </Text>
           <Text style={styles.dateJoinedText}>
             Date Joined - {formatDate(user.created_at)}
@@ -172,14 +267,18 @@ const UserDetailsScreen = ({
         </View>
         <View style={styles.accountsUserNameContainer}>
           {/* Change these from API and the user */}
-          <Text style={styles.text}>{user.name} {user.last_name}</Text>
+          <Text style={styles.text}>
+            {user.name} {user.last_name}
+          </Text>
         </View>
         <ScreenHeader>
-          <ElevatedCard
-            onPress={() => setIsAdding(prevIsAdding => !prevIsAdding)}
-            textStyle={styles.addBillText}>
-            Add Bill
-          </ElevatedCard>
+          {!isAdding && (
+            <ElevatedCard
+              onPress={() => setIsAdding(prevIsAdding => !prevIsAdding)}
+              textStyle={styles.addBillText}>
+              Add Bill
+            </ElevatedCard>
+          )}
         </ScreenHeader>
         <Card style={styles.addBillForm}>
           {isAdding && (
@@ -198,21 +297,59 @@ const UserDetailsScreen = ({
           )}
           <View style={styles.textInputContainer}>
             <Text style={styles.text}>Previous Meter:</Text>
-            <View style={styles.infoStyle}>
-              <Text style={styles.infoText}>544423</Text>
-            </View>
+            {previousMeter !== null ? (
+              <View style={styles.infoStyle}>
+                <Text style={styles.infoText}>{previousMeter}</Text>
+              </View>
+            ) : !isAdding ? (
+              <Text style={styles.textInputStyle}>None</Text>
+            ) : (
+              <TextInput
+                control={control}
+                name="previousMeter"
+                placeholder="Enter Prev"
+                backgroundColor={Colors.White}
+                textColor={Colors.Black}
+                style={styles.textInputStyle}
+                keyboardType="decimal-pad"
+              />
+            )}
           </View>
+
           <View style={styles.textInputContainer}>
             <Text style={styles.text}>Total Klw:</Text>
-            <View style={styles.infoStyle}>
-              <Text style={styles.infoText}>544423</Text>
-            </View>
+            {isAdding ? (
+              <View style={styles.infoStyle}>
+                <Text style={styles.infoText}>{billInfo.total_kwh}</Text>
+              </View>
+            ) : (
+              <View style={styles.infoStyle}>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0
+                    ? bills[0].total_kwh.toFixed(1)
+                    : '0'}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={styles.textInputContainer}>
             <Text style={styles.text}>Total Amount (+Taxes):</Text>
-            <View style={styles.infoStyle}>
-              <Text style={styles.infoText}>544423</Text>
-            </View>
+            {isAdding ? (
+              <View style={styles.infoStyle}>
+                <Text style={styles.infoText}>
+                  {billInfo.total_amount_calculated} $
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.infoStyle}>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0
+                    ? bills[0]?.total_amount.toFixed(1)
+                    : '0'}{' '}
+                  $
+                </Text>
+              </View>
+            )}
           </View>
           <View
             style={[
@@ -234,17 +371,30 @@ const UserDetailsScreen = ({
               />
             ) : (
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0
+                    ? bills[0].remaining_amount.toFixed(1)
+                    : '0'}
+                </Text>
               </View>
             )}
           </View>
           {isAdding && (
-            <ElevatedCard
-              onPress={handleSubmit(onSubmit)}
-              textStyle={styles.saveButtonText}
-              style={styles.saveButtonContainer}>
-              Save
-            </ElevatedCard>
+            <>
+              <ElevatedCard
+                onPress={handleSubmit(onCalulate)}
+                textStyle={styles.saveButtonText}
+                style={styles.saveButtonContainer}>
+                Calculate
+              </ElevatedCard>
+
+              <ElevatedCard
+                onPress={handleSubmit(onSubmit)}
+                textStyle={styles.saveButtonText}
+                style={styles.saveButtonContainer}>
+                Save
+              </ElevatedCard>
+            </>
           )}
         </Card>
         {isAdding && (
@@ -252,29 +402,38 @@ const UserDetailsScreen = ({
             <View style={styles.textInputContainer}>
               <Text style={styles.text}>Last Meter:</Text>
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0 ? bills[0].current_meter : 'None'}
+                </Text>
               </View>
             </View>
             <View style={styles.textInputContainer}>
               <Text style={styles.text}>Initial Meter:</Text>
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0 ? bills[0].previous_meter : 'None'}
+                </Text>
               </View>
             </View>
             <View style={styles.textInputContainer}>
-              <Text style={styles.text}>Total Kwl:</Text>
+              <Text style={styles.text}>Total KwH:</Text>
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0 ? bills[0].total_kwh : 'None'}
+                </Text>
               </View>
             </View>
             <View style={styles.textInputContainer}>
               <Text style={styles.text}>Total Amount:</Text>
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0 ? `${bills[0].total_amount} $` : 'None'}
+                </Text>
               </View>
             </View>
           </Card>
         )}
+
         {isAdding && (
           <Card style={styles.addBillForm}>
             <View
@@ -284,7 +443,9 @@ const UserDetailsScreen = ({
               ]}>
               <Text style={styles.text}>Total Amount Remaining:</Text>
               <View style={styles.infoStyle}>
-                <Text style={styles.infoText}>544423</Text>
+                <Text style={styles.infoText}>
+                  {bills && bills.length > 0 ? bills[0].remaining_amount : '0'}
+                </Text>
               </View>
             </View>
             <View
@@ -311,7 +472,7 @@ const UserDetailsScreen = ({
               </View>
               <Animated.FlatList
                 horizontal
-                data={[DUMMY_PAYMENTS, DUMMY_PAYMENTS_2]}
+                data={chunckedBills}
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 style={styles.containerFlatListStyle}
@@ -320,14 +481,14 @@ const UserDetailsScreen = ({
                   return (
                     <View style={styles.flatlistArrayContainer}>
                       {item.map((it, idx) => (
-                        <PaymentItem key={it.id} item={it} index={idx} />
+                        <BillItem key={it.bill_id} item={it} index={idx} />
                       ))}
                     </View>
                   );
                 }}
               />
               <CarouselIndicators
-                items={[DUMMY_PAYMENTS, DUMMY_PAYMENTS_2]}
+                items={chunckedBills}
                 animatedIndex={scrollOffsetX}
               />
             </View>
@@ -378,7 +539,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 4,
     flex: 0,
-    width: '25%',
+    minWidth: '25%',
+    maxWidth: '65%',
     textAlign: 'center',
     backgroundColor: Colors.White,
   },

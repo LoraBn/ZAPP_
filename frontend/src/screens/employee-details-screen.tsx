@@ -61,6 +61,14 @@ export const DUMMY_ASSIGNMENTS_2: Assignment[] = [
   {id: 8, date: new Date(), status: 'Done', title: 'Testing One'},
 ];
 
+export const chunkArray = (arr: any[], chunkSize: number) => {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += chunkSize) {
+    chunks.push(arr.slice(i, i + chunkSize));
+  }
+  return chunks;
+};
+
 const EmployeeDetailsScreen = ({
   navigation,
   route: {params},
@@ -108,14 +116,6 @@ const EmployeeDetailsScreen = ({
     }
   };
 
-  // Function to split array into chunks
-  const chunkArray = (arr: any[], chunkSize: number) => {
-    const chunks = [];
-    for (let i = 0; i < arr.length; i += chunkSize) {
-      chunks.push(arr.slice(i, i + chunkSize));
-    }
-    return chunks;
-  };
 
   useEffect(() => {
     fetchExpenses();
