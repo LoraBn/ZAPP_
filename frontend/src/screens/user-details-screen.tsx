@@ -86,11 +86,18 @@ const UserDetailsScreen = ({
     },
   });
 
+  const [refresh, setRefresh] = useState<boolean>(false);
+
   useEffect(() => {
     fetchPreviousMeter();
     fetchAllBills();
     establishWebSocketConnection();
   }, []);
+
+  useEffect(()=>{
+    fetchPreviousMeter();
+    fetchAllBills();
+  },[refresh])
 
   const fetchPreviousMeter = async () => {
     try {
@@ -191,6 +198,8 @@ const UserDetailsScreen = ({
     }
   }
 
+ 
+
   const establishWebSocketConnection = () => {
     if (!socket) {
       const newSocket = io(ioString);
@@ -202,12 +211,7 @@ const UserDetailsScreen = ({
       socket.on("newBill", (data) => {
         console.log('New bill received:', data);
         if (user.customer_id === data.customer_id) {
-          // Add the new bill to the beginning of the bills array
-          setBills((prevBills) => [data.bill_info, ...prevBills]);
-          // Chunk the updated bills array
-          const chunkedBills1 = chunkArray([data.bill_info, ...bills], 4);
-          setChunkedBills(chunkedBills1);
-          console.log(chunckedBills)
+        setRefresh(prev=> !prev);
         }
       });
     }
@@ -337,7 +341,7 @@ const UserDetailsScreen = ({
             {isAdding ? (
               <View style={styles.infoStyle}>
                 <Text style={styles.infoText}>
-                  {billInfo.total_amount_calculated} $
+                  {billInfo.total_amount_calculated?.toFixed(2)} $
                 </Text>
               </View>
             ) : (

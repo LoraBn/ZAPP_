@@ -34,7 +34,7 @@ const Card = ({
       pointerEvents={pointerEvents}
       style={[
         styles.container,
-        {backgroundColor: selected ? Colors.VeryLightBlue : Colors.LightGray},
+        {backgroundColor: selected ? Colors.Selected : Colors.LightGray},
         style,
       ]}
       onLayout={onLayout}

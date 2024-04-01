@@ -23,8 +23,8 @@ import client from '../API/client';
 import {io} from 'socket.io-client';
 import {ioString} from '../API/io';
 
-export const USERS_FILTERS = ['Done', 'Not Done', 'Pending'];
-export const EMPLOYEE_FILTERS = ['Paid', 'Not Paid'];
+export const USERS_FILTERS = ['Done', 'Not Done'];
+export const EMPLOYEE_FILTERS = [];
 
 export interface User {
   customer_id: number;
@@ -59,60 +59,6 @@ export interface Employee {
   created_at: Date;
 }
 
-export const DUMMY_USERS: User[] = [
-  {
-    id: 1,
-    due_date: new Date('2024-03-13'),
-    address: 'Hone',
-    amount_to_pay: 100,
-    name: 'Test',
-    paid: 24,
-    payment_type: 'Fixed',
-    plan: '10Amp',
-    remark: 'Remark',
-    profile_picture: null,
-    date_joined: new Date('2024-01-30'),
-    phone_number: 12312312,
-  },
-  {
-    id: 2,
-    due_date: new Date('2024-03-10'),
-    address: 'Honike',
-    amount_to_pay: 200,
-    name: 'Kalvin',
-    paid: 200,
-    payment_type: 'Fixed',
-    plan: '20Amp',
-    remark: 'Dummy fetch this from api',
-    profile_picture: null,
-    date_joined: new Date('2024-01-30'),
-    phone_number: 12312312,
-  },
-];
-//   {
-//     id: 1,
-//     address: 'Home',
-//     name: 'Greeter',
-//     permissions: ['admin', 'user', 'owner'],
-//     remark: 'Dummy fetch this from api',
-//     salary: 1000,
-//     profile_picture: null,
-//     role: 'admin',
-//     date_joined: new Date(),
-//   },
-//   {
-//     id: 2,
-//     address: 'Office',
-//     name: 'Greetings',
-//     permissions: ['owner'],
-//     remark: 'Dummy fetch this from api',
-//     salary: 2000,
-//     profile_picture: null,
-//     role: 'normal',
-//     date_joined: new Date(),
-//   },
-// ];
-
 type UsersDashboardProps = StackScreenProps<
   UsersStackNavigationParams,
   'UsersDashboard'
@@ -145,7 +91,18 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
     });
 
     if (usersType == 'customers') {
-      setCustomers(responce.data.customers);
+      setCustomers(
+        responce.data.customers.filter(
+          (customer: User) => {
+            if(isBilling && filters.includes("Done")){
+              return customer.is_cycled == true
+            }
+            else{
+              return customer.is_cycled == false
+            }
+          },
+        ),
+      );
     } else if (usersType == 'employees') {
       setEmployees(responce.data.employees);
     }
@@ -166,7 +123,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       // Handle error appropriately, maybe show an alert or set a default value for isBilling
     }
   };
-  
+
   const HandleBilling = async () => {
     try {
       let endpoint;
@@ -187,15 +144,20 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       }
     } catch (error) {
       console.error(error);
-      Alert.alert(response?.data?.message)
+      Alert.alert(response?.data?.message);
     }
   };
-  
+
+  const [refresh, setRefresh] = useState<boolean>(false);
+
+  useEffect(() => {
+    establishWebSocketConnection();
+  }, []);
+
   useEffect(() => {
     fetchBillingCycle();
     fetchUsers();
-    establishWebSocketConnection();
-  }, [usersType]);
+  }, [refresh, usersType, filters]);
 
   const establishWebSocketConnection = () => {
     if (!socket) {
@@ -206,6 +168,15 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
     if (socket) {
       socket.on('newEmployee', (data: any) => {
         setEmployees(prevEmps => [data, ...prevEmps]);
+      });
+
+      socket.on('newBill', data => {
+        setRefresh(prev => !prev);
+      });
+      socket.on('refreshCycle', data => {
+        if (userType != 'customer') {
+          setRefresh(prev => !prev);
+        }
       });
     }
   };
@@ -257,24 +228,25 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
         <View style={styles.h10} />
         {usersType === 'customers' ? (
           <View style={styles.filtersContainer}>
-            {USERS_FILTERS.map(item => (
-              <Card
-                key={item}
-                onPress={() => {
-                  const alreadySelected = filters.find(fil => fil === item);
+            {isBilling &&
+              USERS_FILTERS.map(item => (
+                <Card
+                  key={item}
+                  onPress={() => {
+                    const alreadySelected = filters.find(fil => fil === item);
 
-                  if (alreadySelected) {
-                    return setFilters(prevFilters => [
-                      ...prevFilters.filter(it => it !== item),
-                    ]);
-                  }
-                  return setFilters(prevFilters => [...prevFilters, item]);
-                }}
-                selected={!!filters.find(fil => fil === item)}
-                style={styles.cardContainer}>
-                <Text style={styles.text}>{item}</Text>
-              </Card>
-            ))}
+                    if (alreadySelected) {
+                      return setFilters(prevFilters => [
+                        ...prevFilters.filter(it => it !== item),
+                      ]);
+                    }
+                    return setFilters(prevFilters => [item]);
+                  }}
+                  selected={!!filters.find(fil => fil === item)}
+                  style={styles.cardContainer}>
+                  <Text style={styles.text}>{item}</Text>
+                </Card>
+              ))}
           </View>
         ) : (
           <View style={styles.filtersContainer}>

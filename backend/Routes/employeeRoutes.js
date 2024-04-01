@@ -21,6 +21,11 @@ const {
   getEmployeeExpenses,
   getAllOpenAlertTickets,
   closeAlertTicketEmp,
+  checkActiveBillingCycleEmp,
+  startBillingEmp,
+  stopBillingEmp,
+  calculateBillEmp,
+  getPreviousMeterEmp,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -67,9 +72,20 @@ module.exports = function (io) {
 
   //bills
   router.get("/bills", authenticateEmployeeToken, getAllBillsEmp);
-  router.get("/bills/:username", authenticateEmployeeToken, getCustomerBillEmp);
-  router.post("/bills", authenticateEmployeeToken, createBillEmp);
+  router.get("/bills/:id", authenticateEmployeeToken, getCustomerBillEmp);
+  router.post("/bills/:id", authenticateEmployeeToken, createBillEmp);
   router.put("/bills/:id", authenticateEmployeeToken, updateBillEmp);
+
+   //Billing cycle
+   router.get('/billing-cycle', authenticateEmployeeToken, checkActiveBillingCycleEmp)
+   router.post('/billing-cycle/start', authenticateEmployeeToken, startBillingEmp);
+   router.post('/billing-cycle/stop', authenticateEmployeeToken, stopBillingEmp)
+
+   //Previous Meter;
+  router.get('/previous-meter/:id', authenticateEmployeeToken, getPreviousMeterEmp)
+
+    //calculate Bill
+  router.post('/calculate-bill/:id', authenticateEmployeeToken, calculateBillEmp)
 
   //Price
   router.get("/price", authenticateEmployeeToken, getKwhPriceEmp);

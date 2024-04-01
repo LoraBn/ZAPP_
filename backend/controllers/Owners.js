@@ -1491,6 +1491,9 @@ const startBilling = async (req, res) => {
       WHERE owner_id = $1`;
     await pool.query(updateCustomersQuery, [ownerId]);
 
+    let room = `emp${ownerId}`
+    req.app.get('io').to(room).emit('refreshCycle',{cycleId,ownerId})
+
     res
       .status(200)
       .json({ cycleId, message: "Billing cycle started successfully." });
@@ -1518,6 +1521,9 @@ const stopBilling = async (req, res) => {
 
     const cycleId = rows[0].cycle_id;
 
+    let room = `emp${ownerId}`
+    req.app.get('io').to(room).emit('refreshCycle',{cycleId,ownerId})
+    
     res
       .status(200)
       .json({ cycleId, message: "Billing cycle stopped successfully." });
