@@ -21,7 +21,6 @@ const authenticateUser = async (req, res, next) => {
           );
   
           if (isOwner.rows.length) {
-            console.log(ownerUser);
             req.user = ownerUser;
             console.log('authenticated')
             return next(); // Added return statement
@@ -34,21 +33,18 @@ const authenticateUser = async (req, res, next) => {
             [customerUser.userId, customerUser.username] // Fixed variable name
           );
           if (isCustomer.rows.length) {
-            console.log(customerUser);
             req.user = customerUser;
             return next(); // Added return statement
           }
           break; // Added break statement
         case "employee":
           const employeeUser = await jwt.verify(token, process.env.EMPLOYEE_ACCESS_TOKEN); // Renamed variable to avoid conflict
-  
           const isEmployee = await pool.query(
             "SELECT * FROM employees WHERE employee_id = $1 AND username=$2",
             [employeeUser.userId, employeeUser.username] // Fixed variable name
           );
   
           if (isEmployee.rows.length) {
-            console.log(employeeUser);
             req.user = employeeUser;
             return next(); // Added return statement
           }

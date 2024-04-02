@@ -24,6 +24,7 @@ import client from '../API/client';
 import {useUser} from '../storage/use-user';
 import {ioString} from '../API/io';
 import {io} from 'socket.io-client';
+import OwnerHeader from '../components/ui/owner-header';
 
 type BillsNavPageProps = StackScreenProps<
   BillingStackNavigatorParams,
@@ -156,6 +157,45 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
     establishWebSocketConnection();
   }, []);
 
+  const [refresh, setRefresh]= useState<boolean>(false)
+
+  useEffect(() => {
+    fetchProfit()
+    fetchPrice()
+  }, [refresh]);
+
+  const [kwhPrice, setKwhPrice] = useState<string>('No Price');
+
+  const fetchPrice = async () => {
+    try {
+      const response = await client.get(`/${type}/price`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setKwhPrice(`${response.data.price.kwh_price}`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [profit, setProfit] = useState<number>();
+  const fetchProfit = async () => {
+    try {
+      const responce = await client.get(`/${type}/profit`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (responce) {
+        setProfit(parseInt(responce.data.profit));
+        console.log(profit);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const establishWebSocketConnection = () => {
     if (!socket) {
       const newSocket = io(ioString);
@@ -207,6 +247,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
       //expense
       socket.on('newExpense', (data: any) => {
         setExpenses(prevExpenses => [data, ...prevExpenses]);
+        setRefresh(prev => !prev);
       });
       socket.on('updateExpense', (data: any) => {
         const {oldId, username, amount, description, expense_date} = data;
@@ -217,6 +258,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           );
           return [newExpense, ...filtered];
         });
+        setRefresh(prev => !prev);
       });
       socket.on('deleteExpense', (data: any) => {
         const {deletedId} = data;
@@ -226,6 +268,13 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           );
           return updatedExpenses;
         });
+        setRefresh(prev => !prev);
+      });
+       
+
+      //bills
+      socket.on('newBill', data => {
+        setRefresh(prev => !prev);
       });
     }
   };
@@ -238,20 +287,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         {paddingTop: insets.top + 15},
       ]}
       style={styles.screen}>
-      <View style={styles.profitFeesContainer}>
-        <Text style={styles.profitText}>Profit</Text>
-        <WhiteCard style={styles.amountContainer}>
-          <Text style={styles.amountText}>$ 56666</Text>
-        </WhiteCard>
-        <Text style={styles.profitText}>Fees</Text>
-        <WhiteCard
-          style={[
-            styles.amountContainer,
-            {backgroundColor: isPaid ? Colors.Green : Colors.White},
-          ]}>
-          <Text style={styles.amountText}>{isPaid ? 'PAID' : '$ 100'}</Text>
-        </WhiteCard>
-      </View>
+      <OwnerHeader kwhPrice={kwhPrice || 'No price'} profit={profit || "0"}/>
       <View>
         <View style={styles.alertTitleContainer}>
           <Text style={styles.alertTitle}>Subscription Plans</Text>

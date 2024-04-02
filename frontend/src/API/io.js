@@ -1,1 +1,1 @@
-export const ioString = "http://192.168.1.8:3000";
+export const ioString = "http://192.168.1.4:3000";

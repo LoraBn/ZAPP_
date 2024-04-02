@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -19,6 +19,11 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {CustomerHomeStackNavigationParams} from '../navigation/customer-home-stack-navigation';
 import TimeRemaining from '../components/ui/time-remaining';
 import Schedule from '../components/ui/schedule';
+import {useUser} from '../storage/use-user';
+import client from '../API/client';
+import {ioString} from '../API/io';
+import {io} from 'socket.io-client';
+import AnnouncementItem from '../components/alerts/announcement-item';
 
 export const DUMMY_ALERTS = [
   {
@@ -38,8 +43,7 @@ export const DUMMY_ALERTS = [
   {
     id: 3,
     user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor samira dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor samira dolor dolor dolor dolor',
     date: new Date(),
   },
 ];
@@ -107,6 +111,40 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
 
   const isPaid = false;
 
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const {socket, setSocket, accessToken} = useUser(state => state);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    establishWebSocketConnection();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await client.get(`/customer/announcements`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setAnnouncements(response.data.announcements.reverse());
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+    }
+    if (socket) {
+      socket.on('newAnnouncement', (data: any) => {
+        console.log('New announcement received:', data);
+        setAnnouncements(prevAnnouncements => [data, ...prevAnnouncements]);
+      });
+    }
+  };
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -141,9 +179,9 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={DUMMY_ALERTS}
+              data={announcements?.slice(0, 3)}
               scrollEnabled={false}
-              renderItem={AlertItem}
+              renderItem={AnnouncementItem}
               ListFooterComponent={() =>
                 ViewAll({onPress: () => navigation.navigate('Announcements')})
               }

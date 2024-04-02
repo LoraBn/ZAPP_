@@ -38,7 +38,7 @@ io.on("connection", (socket) => {
 const OwnerRoutes = require("./Routes/ownerRoutes")(io);
 const globalRoutes = require("./Routes/globalRoutes");
 const employeeRoutes = require("./Routes/employeeRoutes")(io);
-const customerRoutes = require("./Routes/customerRoutes");
+const customerRoutes = require("./Routes/customerRoutes")(io);
 
 app.use("/api/", globalRoutes);
 app.use("/api/owner", OwnerRoutes);

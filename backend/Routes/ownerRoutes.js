@@ -69,6 +69,9 @@ const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
 
 module.exports = function (io) {
+  
+  router.post("/signup", ownerSignUp);
+
   router.use(authenticateOwnerToken, (req, res, next) => {
     // Join the room when the request is authenticated
     io.on("connection", (socket) => {
@@ -91,7 +94,6 @@ module.exports = function (io) {
     next(); // Call the next middleware in the chain
   });
 
-  router.post("/signup", ownerSignUp);
   router.put("/profile", authenticateOwnerToken, ownerUpdate);
 
   //customers

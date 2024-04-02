@@ -106,10 +106,10 @@ const getAllCustomerBills = async (req, res) => {
 
     // Your query to get the bill for the specified customer
     const queryText =
-      "SELECT * FROM bills WHERE owner_id = $1 AND customer_id = $2";
+      "SELECT * FROM bills WHERE owner_id = $1 AND customer_id = $2 ORDER BY billing_date DESC";
     const result = await pool.query(queryText, [ownerId, customerId]);
 
-    res.status(200).json({ bill: result.rows[0] });
+    res.status(200).json({ bills: result.rows });
   } catch (error) {
     console.error("Error fetching customer bill:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
@@ -136,19 +136,53 @@ const getAllOpenTicketsCus = async (req, res) => {
     const ownerId = req.user.ownerId;
     const customerId = req.user.userId;
 
-    // Retrieve all open support tickets for the customer
-    const openTicketsQuery =
-      "SELECT * FROM support_tickets WHERE owner_id = $1 AND customer_id = $2 AND is_closed = false";
-    const openTicketsResult = await pool.query(openTicketsQuery, [
-      ownerId,
-      customerId,
-    ]);
+    // Retrieve all support tickets for the provided owner
+    const ticketsQuery = `
+      SELECT s.ticket_id, s.owner_id, s.customer_id, c.username AS customer_username, o.username AS owner_username, s.ticket_message,
+             s.is_closed, s.created_at
+      FROM support_tickets s
+      JOIN owners o ON s.owner_id = o.owner_id
+      JOIN customers c on c.owner_id = $1
+      LEFT JOIN owners co ON s.owner_id = co.owner_id
+      WHERE c.customer_id = $2
+      ORDER BY s.created_at DESC
+    `;
+    const ticketsResult = await pool.query(ticketsQuery, [ownerId, customerId]);
 
-    const openTicketsList = openTicketsResult.rows;
+    const supportTicketList = [];
+    for (const ticket of ticketsResult.rows) {
+      // Fetch replies for each ticket from both owners and customers
+      const repliesQuery = `
+        SELECT sr.reply_text, 
+               CASE 
+                 WHEN sr.isSentByOwner THEN o.username
+                 ELSE c.username
+               END AS sender_username
+        FROM support_tickets_replies sr
+        LEFT JOIN owners o ON sr.owner_id = o.owner_id
+        LEFT JOIN customers c ON sr.customer_id = c.customer_id
+        WHERE sr.ticket_id = $1
+      `;
+      const repliesResult = await pool.query(repliesQuery, [ticket.ticket_id]);
+      const replies = repliesResult.rows.reverse();
 
-    res.status(200).json({ open_tickets_list: openTicketsList });
+      const supportTicket = {
+        ticket_id: ticket.ticket_id,
+        owner_id: ticket.owner_id,
+        customer_id: customerId,
+        created_by: req.user.username,
+        owner_username: ticket.owner_username,
+        ticket_message: ticket.ticket_message,
+        is_closed: ticket.is_closed,
+        created_at: ticket.created_at,
+        replies: replies.reverse(), // Reverse the order of replies to match the structure
+      };
+      supportTicketList.push(supportTicket);
+    }
+
+    res.status(200).json({ support_ticket_list: supportTicketList });
   } catch (error) {
-    console.error("Error retrieving all open support tickets:", error);
+    console.error("Error retrieving all support tickets:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -277,63 +311,67 @@ const getAllTicketRepliesCus = async (req, res) => {
 };
 
 const createReplyCus = async (req, res) => {
-    try {
-      const ownerId = req.user.ownerId;
-      const ticketId = req.params.id;
-      const { replyText } = req.body;
-      const isSentByOwner = false;
-      const customerId = req.user.userId
-  
-      // Check if the ticket is closed
-      const isTicketClosedResult = await pool.query(
-        "SELECT is_closed FROM support_tickets WHERE ticket_id = $1",
-        [ticketId]
-      );
-  
-      if (
-        isTicketClosedResult.rows.length > 0 &&
-        isTicketClosedResult.rows[0].is_closed
-      ) {
-        return res.status(403).json({ error_message: "Ticket is closed" });
-      }
-  
-      if (!customerId) {
-        return res
-          .status(401)
-          .json({ error_message: "Error finding the customer" });
-      }
-  
-      const queryText = `
-        INSERT INTO support_tickets_replies (ticket_id, owner_id, customer_id, reply_text, issentbyowner) 
-        VALUES($1, $2, $3, $4, $5)
-        RETURNING reply_id, created_at
-      `;
-  
-      const result = await pool.query(queryText, [
-        ticketId,
-        ownerId,
-        customerId,
-        replyText,
-        isSentByOwner,
-      ]);
-  
-      if (result.rows.length > 0) {
-        const { reply_id, created_at } = result.rows[0];
-        const userType = isSentByOwner ? "owner" : "customer";
-        res.status(201).json({
-          replyId: reply_id,
-          userType: userType,
-          createdAt: created_at,
-          message: "Reply created successfully!",
-        });
-      } else {
-        res.status(500).json({ error_message: "Failed to create reply" });
-      }
-    } catch (error) {
-      console.error("Error creating reply:", error);
-      res.status(500).json({ error_message: "Internal Server Error" });
+  try {
+    const ownerId = req.user.ownerId;
+    const ticketId = req.params.id;
+    const { replyText } = req.body;
+    const isSentByOwner = false;
+    const customerId = req.user.userId;
+
+    // Check if the ticket is closed
+    const isTicketClosedResult = await pool.query(
+      "SELECT is_closed FROM support_tickets WHERE ticket_id = $1",
+      [ticketId]
+    );
+
+    if (
+      isTicketClosedResult.rows.length > 0 &&
+      isTicketClosedResult.rows[0].is_closed
+    ) {
+      return res.status(403).json({ error_message: "Ticket is closed" });
     }
-  };
+
+    if (!customerId) {
+      return res
+        .status(401)
+        .json({ error_message: "Error finding the customer" });
+    }
+
+    const queryText = `
+      INSERT INTO support_tickets_replies (ticket_id, owner_id, customer_id, reply_text, issentbyowner) 
+      VALUES($1, $2, $3, $4, $5)
+      RETURNING reply_id, created_at
+    `;
+
+    const result = await pool.query(queryText, [
+      ticketId,
+      ownerId,
+      customerId,
+      replyText,
+      isSentByOwner,
+    ]);
+
+    if (result.rows.length > 0) {
+      const { reply_id, created_at } = result.rows[0];
+      const userType = isSentByOwner ? "owner" : "customer";
+
+      let room = `cust${ownerId}`;
+      req.app.get('io').to(room).emit('newTicketReply', {customerId});
+      
+      res.status(201).json({
+        replyId: reply_id,
+        userType: userType,
+        createdAt: created_at,
+        message: "Reply created successfully!",
+      });
+    } else {
+      res.status(500).json({ error_message: "Failed to create reply" });
+    }
+  } catch (error) {
+    console.error("Error creating reply:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
 
 module.exports = {
   updateProfileCustomer,

@@ -123,10 +123,12 @@ const UserAlertSystem = () => {
 
   const {accessToken, socket, setSocket} = useUser(state => state);
 
+  const [refresh, setRefresh] = useState<boolean>(false);
+
   useEffect(() => {
     fetchIssues();
-    fetchTickets()
-  }, [usersType]);
+    fetchTickets();
+  }, [usersType, refresh]);
 
   useEffect(() => {
     establishWebSocketConnection();
@@ -166,7 +168,7 @@ const UserAlertSystem = () => {
 
       if (response) {
         const alertTicketList: ALERT[] = response.data.alert_ticket_list;
-        const formattedSections = formatAlertsForSectionList(alertTicketList);
+        const formattedSections = formatAlertsForSectionList(response.data.alert_ticket_list);
         setSections(formattedSections);
         console.log('success', sections);
       }
@@ -264,6 +266,10 @@ const UserAlertSystem = () => {
           return updatedSections;
         });
       });
+
+      socket.on('newTicketReply', data => {
+        setRefresh(prev => !prev);
+      });
     }
   };
 
@@ -339,7 +345,7 @@ const UserAlertSystem = () => {
           <Text style={styles.text}>{'Create Alert'}</Text>
         </Pressable>
 
-        {sections2 && (
+        {sections && (
           <SectionList
             sections={
               usersType === 'employees' || userType === 'employee'

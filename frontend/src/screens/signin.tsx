@@ -30,20 +30,27 @@ const Signin = ({navigation}: SigninProps) => {
 
   async function onSubmit({password, username}: SigninForm) {
     // HERE API CALLS
-    console.log(password, username);
-    const responce = await client.post('/signin', {userName:username, password: password});
+    try {
+      console.log(password, username);
+      const responce = await client.post('/signin', {
+        userName: username,
+        password: password,
+      });
 
-    // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
-    if (responce) {
-      setAccessToken(responce.data.token);
-      setRefreshToken('MockTokenRefresh');
-      setExpiresAtToken(dayjs(new Date()).unix());
-      setType(responce.data.userType);
+      // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
+      if (responce.data.userId) {
+        setAccessToken(responce.data.token);
+        setRefreshToken('MockTokenRefresh');
+        setExpiresAtToken(dayjs(new Date()).unix());
+        setType(responce.data.userType);
 
-      AsyncStorage.setItem('token', responce.data.token);
-      AsyncStorage.setItem('userType',responce.data.userType )
+        AsyncStorage.setItem('token', responce.data.token);
+        AsyncStorage.setItem('userType', responce.data.userType);
 
-      console.log(responce.data.userType)
+        console.log(responce.data.userType);
+      }
+    } catch (error) {
+      console.log(error);
     }
   }
 

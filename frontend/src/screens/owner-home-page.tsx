@@ -11,6 +11,7 @@ import {
 import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
+import OwnerHeader from '../components/ui/owner-header';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Card from '../components/ui/card';
 import {BarChart} from 'react-native-gifted-charts';
@@ -334,20 +335,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
         {paddingTop: insets.top + 15},
       ]}
       style={styles.screen}>
-      <View style={styles.profitFeesContainer}>
-        <Text style={styles.profitText}>Profit</Text>
-        <WhiteCard style={styles.amountContainer}>
-          <Text style={styles.amountText}>$ {profit ? profit : '0'} </Text>
-        </WhiteCard>
-        <Text style={styles.profitText}>Kwh Price</Text>
-        <WhiteCard
-          style={[
-            styles.amountContainer,
-            {backgroundColor: isPaid ? Colors.Green : Colors.White},
-          ]}>
-          <Text style={styles.amountText}>{kwhPrice}</Text>
-        </WhiteCard>
-      </View>
+      <OwnerHeader kwhPrice={kwhPrice} profit= {profit}/>
       <Card
         onLayout={({
           nativeEvent: {

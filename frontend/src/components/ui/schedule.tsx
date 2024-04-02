@@ -1,52 +1,72 @@
-import {StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import Card from './card';
-import {Colors} from '../../utils/colors';
+import { Colors } from '../../utils/colors';
+import client from '../../API/client';
+import { useUser } from '../../storage/use-user';
+
+export type Schedule = {
+  schedule_id: string;
+  owner_id: number;
+  schedule: {
+    id: string;
+    time_to_turn_on: string;
+    time_to_turn_off: string;
+  }[];
+};
 
 const Schedule = () => {
-  //REPLACE THE TIME NUMBERS FROM THE API YOU CAN DO THE API CALL HERE
-  //OR PASS THE DATES ETC... AS PROPS WHICHEVER YOU PREFER
-  //I didnt use the figma date fonts, but feel free to add them
-  // They dont look too good to look at
+  const { type, accessToken } = useUser(state => state);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, []);
+
+  const [scheduleData, setScheduleData] = useState<Schedule[]>([]);
+
+  const fetchSchedule = async () => {
+    try {
+      const response = await client.get(`/${type}/electric-schedule`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      console.log(response.data.schedule);
+      if (response.data.schedule.length > 0) {
+        setScheduleData(response.data.schedule);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <Card style={styles.container}>
       <Text style={styles.ScheduleText}>Schedule</Text>
-      <View style={styles.timeContainer}>
-        <View style={styles.timeNumbersContainer}>
-          <Text style={styles.text}>
-            00:00
-            <Text style={styles.smallText}>Am</Text>
-          </Text>
-          <Text style={styles.text}>
-            00:00
-            <Text style={styles.smallText}>Am</Text>
-          </Text>
+      {scheduleData.map(scheduleItem => (
+        <View key={scheduleItem.schedule_id}>
+          {scheduleItem.schedule.map(item => (
+            <View key={item.id} style={styles.timeContainer}>
+              <View style={styles.timeNumbersContainer}>
+                <Text style={styles.text}>
+                  {new Date(item.time_to_turn_on).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Text style={styles.text}>
+                  {new Date(item.time_to_turn_off).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              <View style={styles.onOffContainer}>
+                <View style={styles.seperatorLeftOrRight} />
+                <Text style={styles.smallText}>ON</Text>
+                <View style={styles.middleSeperator} />
+                <Text style={styles.smallText}>OFF</Text>
+                <View style={styles.seperatorLeftOrRight} />
+              </View>
+            </View>
+          ))}
         </View>
-        <View style={styles.onOffContainer}>
-          <View style={styles.seperatorLeftOrRight} />
-          <Text style={styles.smallText}>ON</Text>
-          <View style={styles.middleSeperator} />
-          <Text style={styles.smallText}>OFF</Text>
-          <View style={styles.seperatorLeftOrRight} />
-        </View>
-        <View style={styles.timeNumbersContainer}>
-          <Text style={styles.text}>
-            00:00
-            <Text style={styles.smallText}>Am</Text>
-          </Text>
-          <Text style={styles.text}>
-            00:00
-            <Text style={styles.smallText}>Am</Text>
-          </Text>
-        </View>
-      </View>
-      <View style={styles.onOffContainer}>
-        <View style={styles.seperatorLeftOrRight} />
-        <Text style={styles.smallText}>ON</Text>
-        <View style={styles.middleSeperator} />
-        <Text style={styles.smallText}>OFF</Text>
-        <View style={styles.seperatorLeftOrRight} />
-      </View>
+      ))}
     </Card>
   );
 };

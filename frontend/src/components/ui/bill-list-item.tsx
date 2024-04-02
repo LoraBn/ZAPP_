@@ -2,7 +2,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import React, {useState} from 'react';
 import {Colors} from '../../utils/colors';
 import {formatDate} from '../../utils/date-utils';
-import { Bill } from '../../screens/user-details-screen';
+import {Bill} from '../../screens/user-details-screen';
 
 type BillListItemProps = {
   item: Bill;
@@ -25,17 +25,17 @@ const BillListItem = ({item}: BillListItemProps) => {
       {isVisible && (
         <View>
           <Text style={[styles.text, styles.fontsize16]}>
-            Current Meter: 556565
+            Current Meter: {item.current_meter}
           </Text>
           <Text style={[styles.text, styles.fontsize16]}>
-            Previous Meter: 556565
+            Previous Meter: {item.previous_meter}
           </Text>
           <View style={styles.h20} />
           <Text style={[styles.text, styles.fontsize16]}>
-            Total Amount: 556565
+            Total Amount: {item.total_amount}
           </Text>
           <Text style={[styles.text, styles.fontsize16]}>
-            Amount Remaining: 556565
+            Amount Remaining: {item.remaining_amount || 0}
           </Text>
         </View>
       )}

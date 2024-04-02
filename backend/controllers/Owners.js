@@ -3,13 +3,12 @@ const { generateOwnerToken } = require("../utils/JWT");
 const bcrypt = require("bcrypt");
 const {
   getCustomerIdForOwner,
-  getEquipmentIdForOwner,
-  getEmployeeIdForOwner,
 } = require("../utils/ownerUtils");
 
 const ownerSignUp = async (req, res) => {
   try {
     const { name, lastName, userName, password } = req.body;
+    console.log("HELLO I M SIGNING UP")
 
     // Check if the username is already registered
     const userNameExists = await pool.query(
@@ -2263,6 +2262,8 @@ const createReply = async (req, res) => {
     if (result.rows.length > 0) {
       const { reply_id, created_at } = result.rows[0];
       const userType = isSentByOwner ? "owner" : "customer";
+      let room = `cust${ownerId}`;
+      req.app.get('io').to(room).emit('newTicketReply', {customerId})
       res.status(201).json({
         replyId: reply_id,
         userType: userType,

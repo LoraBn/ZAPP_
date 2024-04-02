@@ -1,4 +1,4 @@
-import {Image, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
@@ -9,6 +9,7 @@ import {StackScreenProps} from '@react-navigation/stack';
 import {AuthStackParams} from '../navigation/auth-stack-navigation';
 import {useUser} from '../storage/use-user';
 import dayjs from 'dayjs';
+import client from '../API/client';
 
 type SignUpForm = {
   name: string;
@@ -35,27 +36,37 @@ const SignUp = ({navigation}: SignUpProps) => {
     },
   });
 
-  function onSubmit({
+  const onSubmit = async ({
     password,
     username,
     confirmPassword,
     lastName,
     name,
-  }: SignUpForm) {
-    // HERE API CALLS
-    console.log(password, username);
+  }: SignUpForm) => {
+    try {
+      if (password !== confirmPassword) {
+        Alert.alert('Passwords must match');
+        return;
+      }
+      const response = await client.post('/owner/signup', {
+        name,
+        lastName,
+        userName: username,
+        password,
+      });
 
-    // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
-    // HERE IF YOU ARE RETURNING THE TOKENS WITH THE SIGN UP TOO
-    // You can do validation with yup or zod if you know how, i think youre doing the validation from the server so i didnt do it from the client to not waste time its a capstone
-    if (password && username && confirmPassword && lastName && name) {
-      setAccessToken('MockToken');
-      setRefreshToken('MockTokenRefresh');
-      setExpiresAtToken(dayjs(new Date()).unix());
-      setType('owner');
+      if (response.data.userId) {
+        setAccessToken(response.data.token);
+        setRefreshToken('MockTokenRefresh');
+        setExpiresAtToken(dayjs().unix()); // No need to pass new Date() to dayjs() as it defaults to current date and time
+        setType('owner');
+        // Navigate to some success screen or perform other actions upon successful signup
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert('An error occurred'); // Handle error gracefully
     }
-  }
-
+  };
   return (
     <ScrollView style={styles.screen}>
       <Image source={{uri: ImageStrings.AuthLogo, height: 300, width: 300}} />
