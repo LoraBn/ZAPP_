@@ -112,16 +112,19 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
   const isPaid = false;
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const {socket, setSocket, accessToken} = useUser(state => state);
-
+  const {socket, setSocket, accessToken,type} = useUser(state => state);
+  
   useEffect(() => {
-    fetchAnnouncements();
-    establishWebSocketConnection();
+    
+    if(type === 'customer'){
+      fetchAnnouncements()
+      establishWebSocketConnection();
+    }
   }, []);
 
   const fetchAnnouncements = async () => {
     try {
-      const response = await client.get(`/customer/announcements`, {
+      const response = await client.get(`/${type}/announcements`, {
         headers: {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },

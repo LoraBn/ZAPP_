@@ -46,15 +46,17 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
 
   const onClose = async () => {
     try {
-      const response = await client.put(
-        `/${userType}/issues/${item.alert_id}/close`,
-        null,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+      let endpoint;
+      if (item.alert_id) {
+        endpoint = `/${userType}/issues/${item.alert_id}/close`;
+      } else if (item.ticket_id) {
+        endpoint = `/${userType}/ticket/${item.ticket_id}/close`;
+      }
+      const response = await client.put(endpoint, null, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
-      );
+      });
       if (response) {
         console.log('hi');
       }
@@ -67,8 +69,13 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
     console.log(replyText);
 
     try {
-      const responce = await client.post(
-        `/${userType}/issue/${item.alert_id}/reply`,
+      let endpoint;
+      if (item.alert_id) {
+        endpoint = `/${userType}/issue/${item.alert_id}/reply`;
+      } else if (item.ticket_id) {
+        endpoint = `/${userType}/ticket/${item.ticket_id}/reply`;
+      }
+      const responce = await client.post(endpoint,
         {replyText},
         {
           headers: {
@@ -123,7 +130,9 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
       </View>
       {isExpanded && (
         <View>
-          <Text style={styles.text}>Description: {item.alert_message}</Text>
+          <Text style={styles.text}>
+            Description: {item.alert_message || item.ticket_message}
+          </Text>
         </View>
       )}
       {isExpanded && item.replies && (

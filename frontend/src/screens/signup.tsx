@@ -10,6 +10,7 @@ import {AuthStackParams} from '../navigation/auth-stack-navigation';
 import {useUser} from '../storage/use-user';
 import dayjs from 'dayjs';
 import client from '../API/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SignUpForm = {
   name: string;
@@ -56,6 +57,8 @@ const SignUp = ({navigation}: SignUpProps) => {
       });
 
       if (response.data.userId) {
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('userType', 'Owner');
         setAccessToken(response.data.token);
         setRefreshToken('MockTokenRefresh');
         setExpiresAtToken(dayjs().unix()); // No need to pass new Date() to dayjs() as it defaults to current date and time

@@ -13,6 +13,7 @@ import {useUser} from '../storage/use-user';
 import client from '../API/client';
 import {ioString} from '../API/io';
 import {io} from 'socket.io-client';
+import CreateTicket from '../components/ui/create-ticket';
 
 export type Alert = {
   id: number;
@@ -168,7 +169,9 @@ const UserAlertSystem = () => {
 
       if (response) {
         const alertTicketList: ALERT[] = response.data.alert_ticket_list;
-        const formattedSections = formatAlertsForSectionList(response.data.alert_ticket_list);
+        const formattedSections = formatAlertsForSectionList(
+          response.data.alert_ticket_list,
+        );
         setSections(formattedSections);
         console.log('success', sections);
       }
@@ -186,7 +189,6 @@ const UserAlertSystem = () => {
 
     if (socket) {
       socket.on('closedIssue', ({alert_id}) => {
-        console.log(alert_id);
         setSections(prevSections => {
           const updatedSections = [...prevSections];
 
@@ -220,7 +222,6 @@ const UserAlertSystem = () => {
       });
 
       socket.on('newIssue', newAlert => {
-        console.log('New Alert:', newAlert);
         setSections(prevSections => {
           const updatedSections = [...prevSections];
 
@@ -270,102 +271,174 @@ const UserAlertSystem = () => {
       socket.on('newTicketReply', data => {
         setRefresh(prev => !prev);
       });
+      socket.on('newTicket', data => {
+        setRefresh(prev => !prev);
+      });
+
+      socket.on('closeTicket', ({ticket_id}) => {
+        setSections2(prevSections => {
+          const updatedSections = [...prevSections];
+
+          const openSectionIndex = updatedSections.findIndex(
+            section => section.title === 'Open',
+          );
+          const closedSectionIndex = updatedSections.findIndex(
+            section => section.title === 'Closed',
+          );
+          console.log(openSectionIndex, closedSectionIndex);
+
+          const alertIndex = updatedSections[openSectionIndex].data.findIndex(
+            ticket => ticket.ticket_id === ticket_id,
+          );
+
+          console.log(alertIndex);
+
+          if (alertIndex !== -1) {
+            const removedAlert = updatedSections[openSectionIndex].data.splice(
+              alertIndex,
+              1,
+            )[0];
+            console.log('removed:', removedAlert);
+
+            updatedSections[closedSectionIndex].data.push(removedAlert);
+          }
+          return updatedSections;
+        });
+      });
     }
   };
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader>Alert System</ScreenHeader>
       {userType === 'owner' && (
-        <View style={styles.topItemsContainer}>
-          <Card
-            selected={usersType === 'employees'}
-            onPress={() => setUsersType('employees')}>
-            <Text style={styles.topItemText}>Employee</Text>
-          </Card>
-          <Card
-            selected={usersType === 'customers'}
-            onPress={() => setUsersType('customers')}>
-            <Text style={styles.topItemText}>Customer</Text>
-          </Card>
-        </View>
-      )}
-      <View
-        style={[styles.historyContainer, {marginBottom: insets.bottom + 25}]}>
-        {userType !== 'customer' && (
-          <View style={styles.flatlistHeaderContainer}>
+        <>
+          <ScreenHeader>Alert System</ScreenHeader>
+          <View style={styles.topItemsContainer}>
             <Card
-              selected={filter === 'urgent'}
-              style={[
-                styles.historyTextContainer,
-                {
-                  backgroundColor:
-                    filter === 'urgent'
-                      ? Colors.LightBlue
-                      : Colors.SuperLightBlue,
-                },
-              ]}
-              onPress={() => {
-                if (filter === 'urgent') {
-                  return setFilter(null);
-                }
-
-                return setFilter('urgent');
-              }}>
-              <Text style={styles.historyTitle}>Urgent</Text>
+              selected={usersType === 'employees'}
+              onPress={() => setUsersType('employees')}>
+              <Text style={styles.topItemText}>Employee</Text>
             </Card>
             <Card
-              selected={filter === 'not_urgent'}
-              style={[
-                styles.historyTextContainer,
-                {
-                  backgroundColor:
-                    filter === 'not_urgent'
-                      ? Colors.LightBlue
-                      : Colors.SuperLightBlue,
-                },
-              ]}
-              onPress={() => {
-                if (filter === 'not_urgent') {
-                  return setFilter(null);
-                }
-
-                return setFilter('not_urgent');
-              }}>
-              <Text style={styles.historyTitle}>Not Urgent</Text>
+              selected={usersType === 'customers'}
+              onPress={() => setUsersType('customers')}>
+              <Text style={styles.topItemText}>Customer</Text>
             </Card>
           </View>
-        )}
+          <View
+            style={[
+              styles.historyContainer,
+              {marginBottom: insets.bottom + 25},
+            ]}>
+            <Pressable
+              style={styles.container}
+              onPress={() =>
+                setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
+              }>
+              <Text style={styles.text}>{'Create Alert'}</Text>
+            </Pressable>
 
-        <Pressable
-          style={styles.container}
-          onPress={() =>
-            setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
-          }>
-          <Text style={styles.text}>{'Create Alert'}</Text>
-        </Pressable>
+            {sections && (
+              <SectionList
+                sections={usersType === 'employees' ? sections : sections2}
+                ListHeaderComponent={() =>
+                  isCreatingAlert ? (
+                    <>
+                      <CreateAlert
+                        onSuccess={() => setIsCreatingAlert(false)}
+                      />
+                    </>
+                  ) : null
+                }
+                renderSectionHeader={SectionListHeader}
+                SectionSeparatorComponent={ListSeperator}
+                ItemSeparatorComponent={ListSeperator}
+                renderItem={props => <UserAlertItem {...props} />}
+              />
+            )}
+          </View>
+        </>
+      )}
 
-        {sections && (
-          <SectionList
-            sections={
-              usersType === 'employees' || userType === 'employee'
-                ? sections
-                : sections2
-            }
-            ListHeaderComponent={() =>
-              isCreatingAlert ? (
-                <>
-                  <CreateAlert onSuccess={() => setIsCreatingAlert(false)} />
-                </>
-              ) : null
-            }
-            renderSectionHeader={SectionListHeader}
-            SectionSeparatorComponent={ListSeperator}
-            ItemSeparatorComponent={ListSeperator}
-            renderItem={props => <UserAlertItem {...props} />}
-          />
-        )}
-      </View>
+      {userType === 'employee' && (
+        <>
+          <ScreenHeader>Alert System</ScreenHeader>
+          <View
+            style={[
+              styles.historyContainer,
+              {marginBottom: insets.bottom + 25},
+            ]}>
+            <Pressable
+              style={styles.container}
+              onPress={() =>
+                setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
+              }>
+              <Text style={styles.text}>{'Create Alert'}</Text>
+            </Pressable>
+
+            {sections && (
+              <SectionList
+                sections={sections?.filter(
+                  section => section.title !== 'Closed',
+                )}
+                ListHeaderComponent={() =>
+                  isCreatingAlert ? (
+                    <>
+                      <CreateAlert
+                        onSuccess={() => setIsCreatingAlert(false)}
+                      />
+                    </>
+                  ) : null
+                }
+                renderSectionHeader={SectionListHeader}
+                SectionSeparatorComponent={ListSeperator}
+                ItemSeparatorComponent={ListSeperator}
+                renderItem={props => <UserAlertItem {...props} />}
+              />
+            )}
+          </View>
+        </>
+      )}
+
+      {userType === 'customer' && (
+        <>
+          <ScreenHeader>Support System</ScreenHeader>
+          <View
+            style={[
+              styles.historyContainer,
+              {marginBottom: insets.bottom + 25},
+            ]}>
+            <Pressable
+              style={styles.container}
+              onPress={() =>
+                setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
+              }>
+              <Text style={styles.text}>{'Create Ticket'}</Text>
+            </Pressable>
+
+            {sections2 && (
+              <SectionList
+                sections={sections2?.filter(
+                  section2 => section2.title !== 'Closed',
+                )}
+                ListHeaderComponent={() =>
+                  isCreatingAlert ? (
+                    <>
+                      <CreateTicket
+                        onSuccess={() => setIsCreatingAlert(false)}
+                      />
+                    </>
+                  ) : null
+                }
+                renderSectionHeader={SectionListHeader}
+                SectionSeparatorComponent={ListSeperator}
+                ItemSeparatorComponent={ListSeperator}
+                renderItem={props => <UserAlertItem {...props} />}
+              />
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 };

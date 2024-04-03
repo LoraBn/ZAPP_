@@ -1,5 +1,5 @@
 import {Image, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
 import {useForm} from 'react-hook-form';
@@ -28,6 +28,30 @@ const Signin = ({navigation}: SigninProps) => {
     defaultValues: {password: '', username: ''},
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const userType = await AsyncStorage.getItem('userType');
+        if (token && userType) {
+          const response = await client.get('/auth', {
+            headers: {
+              authorization: `Bearer ${token}`,
+              type: userType,
+            },
+          });
+          if (response.data.success) {
+            setTimeout(()=>setType(userType),2000)
+            setTimeout(()=>setAccessToken(token), 2000);
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchData();
+  }, []);
+
   async function onSubmit({password, username}: SigninForm) {
     // HERE API CALLS
     try {
@@ -39,15 +63,13 @@ const Signin = ({navigation}: SigninProps) => {
 
       // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
       if (responce.data.userId) {
+        await AsyncStorage.setItem('token', responce.data.token);
+        await AsyncStorage.setItem('userType', responce.data.userType);
+        const userType = responce.data.userType;
+        setType(responce.data.userType || userType);
         setAccessToken(responce.data.token);
         setRefreshToken('MockTokenRefresh');
         setExpiresAtToken(dayjs(new Date()).unix());
-        setType(responce.data.userType);
-
-        AsyncStorage.setItem('token', responce.data.token);
-        AsyncStorage.setItem('userType', responce.data.userType);
-
-        console.log(responce.data.userType);
       }
     } catch (error) {
       console.log(error);

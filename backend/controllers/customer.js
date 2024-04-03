@@ -191,24 +191,23 @@ const createSupportTicketCus = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
     const customerId = req.user.userId;
-    const { ticket_title, ticket_message } = req.body;
+    const {ticket_message } = req.body;
 
-    const createdByOnwer = false;
     const is_urgent = false;
 
-    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_title, ticket_message, is_urgent, created_by_owner) 
-        VALUES($1, $2, $3, $4, $5)`;
+    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent) 
+        VALUES($1, $2, $3, $4)`;
 
     const result = await pool.query(queryText, [
       ownerId,
       customerId,
-      ticket_title,
       ticket_message,
       is_urgent,
-      createdByOnwer,
     ]);
 
     if (result.rows.length > 0) {
+      let room = `cust${ownerId}`
+      req.app.get('io').to(room).emit('newTicket')
       res.status(201).json({
         ticket_id: result.rows[0].ticket_id,
         message: "Support ticket created successfully!",
@@ -227,6 +226,7 @@ const createSupportTicketCus = async (req, res) => {
 const closeSupportTicketCus = async (req, res) => {
   try {
     const customerId = req.user.userId;
+    const ownerId =  req.user.ownerId;
     const ticketId = req.params.id;
 
     // Check if the support ticket exists and is owned by the provided customer
@@ -256,6 +256,8 @@ const closeSupportTicketCus = async (req, res) => {
     const closeResult = await pool.query(closeQuery);
 
     if (closeResult.rowCount > 0) {
+      let room = `cust${ownerId}`
+      req.app.get('io').to(room).emit('closeTicket', {ticketId})
       res.status(200).json({
         ticket_id: closeResult.rows[0].ticket_id,
         message: "Support ticket closed successfully!",
@@ -357,7 +359,7 @@ const createReplyCus = async (req, res) => {
 
       let room = `cust${ownerId}`;
       req.app.get('io').to(room).emit('newTicketReply', {customerId});
-      
+
       res.status(201).json({
         replyId: reply_id,
         userType: userType,

@@ -17,6 +17,7 @@ export type Schedule = {
 
 const Schedule = () => {
   const { type, accessToken } = useUser(state => state);
+  console.log(type)
 
   useEffect(() => {
     fetchSchedule();
