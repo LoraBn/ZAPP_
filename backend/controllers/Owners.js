@@ -1,14 +1,12 @@
 const pool = require("../db");
 const { generateOwnerToken } = require("../utils/JWT");
 const bcrypt = require("bcrypt");
-const {
-  getCustomerIdForOwner,
-} = require("../utils/ownerUtils");
+const { getCustomerIdForOwner } = require("../utils/ownerUtils");
 
 const ownerSignUp = async (req, res) => {
   try {
     const { name, lastName, userName, password } = req.body;
-    console.log("HELLO I M SIGNING UP")
+    console.log("HELLO I M SIGNING UP");
 
     // Check if the username is already registered
     const userNameExists = await pool.query(
@@ -1125,7 +1123,6 @@ const getAllBills = async (req, res) => {
   }
 };
 
-
 const getCustomerBill = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2105,7 +2102,6 @@ const getAllSupportTickets = async (req, res) => {
   }
 };
 
-
 const getAllOpenTickets = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2263,7 +2259,7 @@ const createReply = async (req, res) => {
       const { reply_id, created_at } = result.rows[0];
       const userType = isSentByOwner ? "owner" : "customer";
       let room = `cust${ownerId}`;
-      req.app.get('io').to(room).emit('newTicketReply', {customerId})
+      req.app.get("io").to(room).emit("newTicketReply", { customerId });
       res.status(201).json({
         replyId: reply_id,
         userType: userType,
@@ -2529,6 +2525,20 @@ const getAllAlertTickets = async (req, res) => {
 
     const alertTicketList = [];
     for (const alert of alertsResult.rows) {
+      // Fetch assigned employee usernames
+      const assignedEmployeesQuery = `
+        SELECT e.username
+        FROM assigned_alerts aa
+        JOIN employees e ON aa.employee_id = e.employee_id
+        WHERE aa.alert_id = $1
+      `;
+      const assignedEmployeesResult = await pool.query(assignedEmployeesQuery, [
+        alert.alert_id,
+      ]);
+      const assignedUsernames = assignedEmployeesResult.rows.map(
+        (row) => row.username
+      );
+
       // Fetch replies for each alert from both employees and owners
       const repliesQuery = `
         SELECT ar.reply_text, 
@@ -2551,6 +2561,7 @@ const getAllAlertTickets = async (req, res) => {
         alert_type: alert.alert_type,
         alert_message: alert.alert_message,
         is_assigned: alert.is_assigned,
+        assigned_usernames: assignedUsernames, // Include assigned employee usernames
         is_closed: alert.is_closed,
         created_at: alert.created_at,
         created_by: alert.created_by,
@@ -2743,6 +2754,130 @@ const createAlertReply = async (req, res) => {
   }
 };
 
+const getBillsAnalytics = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    // Step 1: Aggregate Billing Data
+    const aggregateQuery = `
+      SELECT
+        SUM(total_amount) AS total_amount_billed,
+        SUM(total_kwh) AS total_kwh_consumed,
+        COUNT(*) AS total_bills,
+        AVG(total_amount) AS average_bill_amount
+      FROM
+        bills
+      WHERE
+        owner_id = $1;
+    `;
+    const aggregateResult = await pool.query(aggregateQuery, [ownerId]);
+    const {
+      total_amount_billed,
+      total_kwh_consumed,
+      total_bills,
+      average_bill_amount,
+    } = aggregateResult.rows[0];
+
+    // Step 2: Analyze Billing Trends Over Time
+    const billingTrendsQuery = `
+      SELECT
+        TO_CHAR(billing_date, 'YYYY-MM') AS billing_month,
+        SUM(total_amount) AS total_amount_billed
+      FROM
+        bills
+      WHERE
+        owner_id = $1
+      GROUP BY
+        billing_month
+      ORDER BY
+        billing_month;
+    `;
+    const billingTrendsResult = await pool.query(billingTrendsQuery, [ownerId]);
+
+    // Step 3: Compare Billing Cycles
+    const billingCycleComparisonQuery = `
+      SELECT
+        EXTRACT(MONTH FROM bc.started_at) AS billing_month,
+        COUNT(*) AS total_billing_cycles,
+        AVG(b.total_amount) AS average_billing_amount
+      FROM
+        billing_cycle bc
+      LEFT JOIN
+        bills b ON bc.cycle_id = b.cycle_id
+      WHERE
+        bc.owner_id = $1
+      GROUP BY
+        billing_month
+      ORDER BY
+        billing_month;  
+    `;
+    const billingCycleComparisonResult = await pool.query(
+      billingCycleComparisonQuery,
+      [ownerId]
+    );
+
+    // Step 5: Plan Pricing Analysis
+    const planPricingAnalysisQuery = `
+      SELECT
+        p.plan_name,
+        COUNT(b.bill_id) AS total_bills,
+        COALESCE(SUM(b.total_amount), 0) AS total_amount_billed
+      FROM
+        plans_prices p
+      LEFT JOIN
+        customers c ON p.plan_id = c.plan_id
+      LEFT JOIN
+        bills b ON c.customer_id = b.customer_id
+      WHERE
+        p.owner_id = $1
+      GROUP BY
+        p.plan_name
+      ORDER BY
+        total_amount_billed DESC;
+    `;
+    const planPricingAnalysisResult = await pool.query(
+      planPricingAnalysisQuery,
+      [ownerId]
+    );
+
+    // Step 6: Expense Analysis
+    const expenseAnalysisQuery = `
+      SELECT
+        TO_CHAR(expense_date, 'YYYY-MM') AS expense_month,
+        SUM(amount) AS total_expenses
+      FROM
+        expenses
+      WHERE
+        owner_id = $1
+      GROUP BY
+        expense_month
+      ORDER BY
+        expense_month;
+    `;
+    const expenseAnalysisResult = await pool.query(expenseAnalysisQuery, [
+      ownerId,
+    ]);
+
+    // Step 7: Generate Insights and Recommendations
+    const insights = {
+      total_amount_billed,
+      total_kwh_consumed,
+      total_bills,
+      average_bill_amount,
+      billing_trends: billingTrendsResult.rows,
+      billing_cycle_comparison: billingCycleComparisonResult.rows,
+      plan_pricing_analysis: planPricingAnalysisResult.rows,
+      total_expenses: expenseAnalysisResult.rows,
+    };
+
+    // Send the insights as a response
+    res.status(200).json(insights);
+  } catch (error) {
+    console.error("Error fetching billing analytics:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   ownerSignUp,
   getCustomersList,
@@ -2808,4 +2943,5 @@ module.exports = {
   createReply,
   getAllAlertReplies,
   createAlertReply,
+  getBillsAnalytics,
 };

@@ -113,14 +113,74 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const {socket, setSocket, accessToken,type} = useUser(state => state);
+
+  const [refresh, setRefresh] = useState<boolean>(false)
   
   useEffect(() => {
-    
-    if(type === 'customer'){
-      fetchAnnouncements()
+     
       establishWebSocketConnection();
-    }
+
   }, []);
+
+
+  useEffect(()=>{
+    fetchSchedule()
+    fetchAnnouncements()
+    fetchPrice()
+    fetchRemaining()
+  }, [refresh])
+
+
+  const [price, setPrice] = useState<any>('0');
+ 
+  const fetchPrice = async () => {
+    try {
+      const response = await client.get(`/${type}/price`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setPrice(response.data.price);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [remaining, setRemaining] = useState<any>()
+
+  const fetchRemaining = async () => {
+    try {
+      const response = await client.get(`${type}/remaining`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+      if(response){
+        setRemaining(response.data.remaining_amount)
+      }
+    } catch (error) {
+      
+    }
+  }
+
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+
+  const fetchSchedule = async () => {
+    try {
+      const response = await client.get(`/${type}/electric-schedule`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      console.log(response.data.schedule);
+      if (response.data.schedule.length > 0) {
+        setScheduleData(response.data.schedule);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -158,7 +218,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
       <View style={styles.profitFeesContainer}>
         <Text style={styles.profitText}>Kwh Price</Text>
         <WhiteCard style={styles.amountContainer}>
-          <Text style={styles.amountText}>$ 56666</Text>
+          <Text style={styles.amountText}>$ {price}</Text>
         </WhiteCard>
         <Text style={styles.profitText} numberOfLines={2}>
           Pending
@@ -168,7 +228,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
             styles.amountContainer,
             {backgroundColor: isPaid ? Colors.Green : Colors.White},
           ]}>
-          <Text style={styles.amountText}>{isPaid ? 'PAID' : '$ 100'}</Text>
+          <Text style={styles.amountText}>$ {remaining || 0}</Text>
         </WhiteCard>
       </View>
       <View>
@@ -192,8 +252,8 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           </WhiteCard>
         </Card>
       </View>
-      <TimeRemaining />
-      <Schedule />
+      <TimeRemaining schedule={scheduleData}/>
+      <Schedule schedule={scheduleData} />
     </ScrollView>
   );
 };

@@ -170,9 +170,9 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   useEffect(() => {
     fetchAnnouncements();
     fetchEquipments();
+    fetchPlans();
     establishWebSocketConnection();
     fetchEmployees();
-    fetchPlans();
     fetchIssues();
     fetchTickets();
     return () => {

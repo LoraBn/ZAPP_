@@ -3,7 +3,6 @@ import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import ScreenHeader from '../components/ui/screen-header';
 import Card from '../components/ui/card';
-import {DUMMY_BILLS} from './bills-nav-page';
 import BillListItem from '../components/ui/bill-list-item';
 import ListSeperator from '../components/ui/list-seperator';
 import {Bill} from './user-details-screen';
@@ -12,10 +11,7 @@ import client from '../API/client';
 
 type DUMMY_FILTERS = string[];
 
-const DUMMY_FILT = ['Pending', 'Paid', 'Date'];
-
 const BillingHistory = () => {
-  const [filters, setFilters] = useState<DUMMY_FILTERS>([]);
 
   const [bills, setBills] = useState<Bill>();
 
@@ -63,9 +59,9 @@ const BillingHistory = () => {
       // Calculate average bill amount
       const averageBill = totals.totalAmount / bills.length;
 
-      setAverageKwh(averageKwh.toFixed(2));
-      setAverageBill(averageBill.toFixed(2));
-      setTotalKwh(totals.totalKwh.toFixed(2));
+      setAverageKwh(averageKwh.toFixed(1));
+      setAverageBill(averageBill.toFixed(1));
+      setTotalKwh(totals.totalKwh.toFixed(0));
 
       // Output the results (you can modify this part according to your UI)
       console.log('Avg Consumption Per Month:', averageKwh.toFixed(2), 'kWh');
@@ -78,25 +74,7 @@ const BillingHistory = () => {
     <View style={styles.screen}>
       <ScreenHeader>Billing History</ScreenHeader>
       <View style={styles.empUsersContainer}>
-        {DUMMY_FILT.map(filt => (
-          <Card
-            onPress={() => {
-              const alreadyInFilters = filters.find(filter => filter === filt);
-
-              if (alreadyInFilters) {
-                const newFilters = filters.filter(filter => filter !== filt);
-
-                return setFilters(newFilters);
-              }
-
-              return setFilters([...filters, filt]);
-            }}
-            key={filt}
-            style={styles.cardContainer}
-            selected={!!filters.find(filter => filter === filt)}>
-            <Text style={styles.text}>{filt}</Text>
-          </Card>
-        ))}
+        <Text></Text>
       </View>
       {bills && (
         <FlatList

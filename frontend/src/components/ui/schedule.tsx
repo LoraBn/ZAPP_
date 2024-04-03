@@ -2,8 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import Card from './card';
 import { Colors } from '../../utils/colors';
-import client from '../../API/client';
-import { useUser } from '../../storage/use-user';
 
 export type Schedule = {
   schedule_id: string;
@@ -15,37 +13,12 @@ export type Schedule = {
   }[];
 };
 
-const Schedule = () => {
-  const { type, accessToken } = useUser(state => state);
-  console.log(type)
-
-  useEffect(() => {
-    fetchSchedule();
-  }, []);
-
-  const [scheduleData, setScheduleData] = useState<Schedule[]>([]);
-
-  const fetchSchedule = async () => {
-    try {
-      const response = await client.get(`/${type}/electric-schedule`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      console.log(response.data.schedule);
-      if (response.data.schedule.length > 0) {
-        setScheduleData(response.data.schedule);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+const Schedule = ({schedule}) => {
 
   return (
     <Card style={styles.container}>
       <Text style={styles.ScheduleText}>Schedule</Text>
-      {scheduleData.map(scheduleItem => (
+      {schedule && schedule.map(scheduleItem => (
         <View key={scheduleItem.schedule_id}>
           {scheduleItem.schedule.map(item => (
             <View key={item.id} style={styles.timeContainer}>

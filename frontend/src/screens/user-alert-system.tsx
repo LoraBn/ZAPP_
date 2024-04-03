@@ -38,6 +38,7 @@ export type ALERT = {
   is_closed: boolean;
   created_at: Date;
   created_by: string;
+  assigned_usernames: string[];
   replies: {sender_username: string; reply_text: string}[];
 };
 
@@ -50,45 +51,6 @@ export type Ticket = {
   is_urgent: boolean;
   created_by_owner: boolean;
 };
-
-export const DUMMY_ALERTS: ALERT[] = [
-  {
-    alert_id: 1,
-    owner_id: 1,
-    owner_username: 'Samira',
-    alert_type: 'Type',
-    alert_message: 'Message',
-    is_assigned: false,
-    is_closed: false,
-    created_at: new Date(),
-    created_by: 'User 1',
-    replies: [],
-  },
-  {
-    alert_id: 2,
-    owner_id: 1,
-    owner_username: 'Samira',
-    alert_type: 'Type',
-    alert_message: 'Message',
-    is_assigned: false,
-    is_closed: false,
-    created_at: new Date(),
-    created_by: 'User 1',
-    replies: [],
-  },
-  {
-    alert_id: 3,
-    owner_id: 1,
-    owner_username: 'Samira',
-    alert_type: 'Type',
-    alert_message: 'Message',
-    is_assigned: false,
-    is_closed: true,
-    created_at: new Date(),
-    created_by: 'User 1',
-    replies: [],
-  },
-];
 
 function formatAlertsForSectionList(alerts: ALERT[]) {
   const sections: {data: ALERT[]; title: 'Open' | 'Closed'}[] = [
@@ -140,43 +102,47 @@ const UserAlertSystem = () => {
   const [sections2, setSections2] = useState<ALERT[] | undefined>(undefined);
 
   const fetchTickets = async () => {
-    try {
-      const response = await client.get(`/${userType}/tickets`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
+    if (userType !== 'employee') {
+      try {
+        const response = await client.get(`/${userType}/tickets`, {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        });
 
-      if (response) {
-        const alertTicketList: ALERT[] = response.data.support_ticket_list;
-        const formattedSections = formatAlertsForSectionList(alertTicketList);
-        setSections2(formattedSections);
-        console.log('success', sections);
+        if (response) {
+          const alertTicketList: ALERT[] = response.data.support_ticket_list;
+          const formattedSections = formatAlertsForSectionList(alertTicketList);
+          setSections2(formattedSections);
+          console.log('success', sections);
+        }
+      } catch (error) {
+        console.log(error);
       }
-    } catch (error) {
-      console.log(error);
     }
   };
 
   // Change the fetchIssues function to update the sections state:
   const fetchIssues = async () => {
-    try {
-      const response = await client.get(`/${userType}/issues`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
+    if (userType !== 'customer') {
+      try {
+        const response = await client.get(`/${userType}/issues`, {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        });
 
-      if (response) {
-        const alertTicketList: ALERT[] = response.data.alert_ticket_list;
-        const formattedSections = formatAlertsForSectionList(
-          response.data.alert_ticket_list,
-        );
-        setSections(formattedSections);
-        console.log('success', sections);
+        if (response) {
+          const alertTicketList: ALERT[] = response.data.alert_ticket_list;
+          const formattedSections = formatAlertsForSectionList(
+            response.data.alert_ticket_list,
+          );
+          setSections(formattedSections);
+          console.log('success', sections);
+        }
+      } catch (error: any) {
+        console.log(error.message);
       }
-    } catch (error: any) {
-      console.log(error.message);
     }
   };
 

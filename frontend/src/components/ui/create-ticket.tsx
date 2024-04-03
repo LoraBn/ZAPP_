@@ -23,21 +23,19 @@ const CreateTicket = ({onSuccess}: CreateAlertProps) => {
   const {type, accessToken} = useUser(state => state);
 
   async function onSubmit(data: CreateAlertForm) {
-    // HERE
-    console.log(data);
     try {
       const reqBody = {
         ticket_message: data.ticketMessage
-      }
-      console.log(`/${type}/ticket`)
-      const responce = await client.post(`/${type}/ticket`, reqBody, {
+      };
+      console.log(`/${type}/ticket`);
+      const response = await client.post(`/${type}/ticket`, reqBody, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      if (responce.data){
-        Alert.alert(responce.data.message)
+      if (response.data) {
+        Alert.alert(response.data.message);
       }
     } catch (error: any) {
       console.log(error);

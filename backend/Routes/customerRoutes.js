@@ -12,6 +12,7 @@ const {
   getAllTicketRepliesCus,
   createReplyCus,
   getKwhPriceCus,
+  fetchRemaining,
 } = require("../controllers/customer");
 const router = Router();
 
@@ -58,6 +59,9 @@ module.exports = function (io) {
 
   //Price
   router.get("/price", authenticateCustomerToken, getKwhPriceCus);
+
+  //Remaining Amount
+  router.get('/remaining', authenticateCustomerToken, fetchRemaining)
 
   //Support Tickets
   router.get("/tickets", authenticateCustomerToken, getAllOpenTicketsCus);

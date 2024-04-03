@@ -15,8 +15,6 @@ import ElevatedCard from './elevated-card';
 import {useUser} from '../../storage/use-user';
 import client from '../../API/client';
 import {ALERT} from '../../screens/user-alert-system';
-import {ioString} from '../../API/io';
-import {io} from 'socket.io-client';
 
 type UserAlertItemProps = {
   item: ALERT;
@@ -57,13 +55,34 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response) {
-        console.log('hi');
+      if (response.data.error_messsage) {
+        Alert.alert(response?.data?.error_messsage)
       }
+      Alert.alert(response?.data?.error_messsage)
     } catch (error) {
       console.log(error);
     }
   };
+
+  async function AssignSelf() {
+    try {
+      const responce = await client.post(
+        `${userType}/issues/${item.alert_id}/assign`,
+        null,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (responce) {
+        Alert.alert('Assigned!');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   async function onSubmit({replyText}: ReplyToAlertForm) {
     console.log(replyText);
@@ -75,7 +94,8 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
       } else if (item.ticket_id) {
         endpoint = `/${userType}/ticket/${item.ticket_id}/reply`;
       }
-      const responce = await client.post(endpoint,
+      const responce = await client.post(
+        endpoint,
         {replyText},
         {
           headers: {
@@ -89,21 +109,6 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
     } catch (error) {
       console.log(error);
     }
-
-    // RNAlert.alert(
-    //   'Confirm?',
-    //   'Do you confirm your info aw shi hek? You Change this to whatever you want',
-    //   [
-    //     {text: 'Cancel'},
-    //     {
-    //       text: 'Save',
-    //       onPress: () => {
-    //         setIsExpanded(false);
-    //         reset();
-    //       },
-    //     },
-    //   ],
-    // );
   }
 
   return (
@@ -160,12 +165,31 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
                 placeholder="Reply..."
                 multiline
               />
+              {item.assigned_usernames && 
+              <View style = {styles.assignedPeopleContainer}>
+                <Text>Assigned To:</Text>
+                <View style={styles.assignedPeopleContainer}>
+                  {item.assigned_usernames.map((username, index) => (
+                    <Text key={index} style={styles.assignedUsername}>
+                      {username}
+                    </Text>
+                  ))}
+                </View>
+              </View>}
+
               <View style={styles.closeOrSubmitElevatedButtonContainer}>
-                <ElevatedCard
+                {<ElevatedCard
                   textStyle={styles.elButtonsText}
                   onPress={onClose}>
-                  {userType === 'customer' ? 'Close' : 'Close / Assign'}
-                </ElevatedCard>
+                  Close
+                </ElevatedCard>}
+                {userType === 'employee' &&  (
+                  <ElevatedCard
+                    textStyle={styles.elButtonsText}
+                    onPress={handleSubmit(AssignSelf)}>
+                    Assign Self
+                  </ElevatedCard>
+                )}
                 <ElevatedCard
                   textStyle={styles.elButtonsText}
                   onPress={handleSubmit(onSubmit)}>
@@ -223,4 +247,13 @@ const styles = StyleSheet.create({
     left: 0,
     top: -25,
   },
+  assignedPeopleContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  assignedUsername: {
+    marginRight: 10, // Adjust spacing between usernames
+  },
+  
 });

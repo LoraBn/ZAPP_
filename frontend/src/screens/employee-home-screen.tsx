@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import React, { useEffect ,useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import WhiteCard from '../components/ui/white-card';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -20,25 +20,22 @@ import {StackScreenProps} from '@react-navigation/stack';
 import Schedule from '../components/ui/schedule';
 import {EmployeeHomeStackNavigationParams} from '../navigation/employee-home-stack-navigation';
 import client from '../API/client';
-import { io } from 'socket.io-client';
-import { useUser } from '../storage/use-user';
+import {io} from 'socket.io-client';
+import {useUser} from '../storage/use-user';
 import AnnouncementItem from '../components/alerts/announcement-item';
-import { ioString } from '../API/io';
-
+import {ioString} from '../API/io';
 
 export const DUMMY_ALERTS = [
   {
     id: 1,
     user: {name: 'Owner'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
     date: new Date(),
   },
   {
     id: 2,
     user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
+    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
     date: new Date(),
   },
   {
@@ -59,20 +56,27 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   const insets = useSafeAreaInsets();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
-   const {setSocket, socket, accessToken, type} = useUser(
-    state => state,
-  );
+  const {setSocket, socket, accessToken, type, setEquipments, setPlans} = useUser(state => state);
 
   useEffect(() => {
-    fetchAnnouncements();
     establishWebSocketConnection();
-    fetchIssues();
     return () => {
       if (socket != null) {
         socket.disconnect();
       }
     };
   }, []);
+
+  const [refresh, setRefresh] = useState<boolean>(false);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    fetchIssues();
+    fetchSchedule();
+    fetchPrice();
+    fetchEquipments();
+    fetchPlans()
+  }, [refresh]);
 
   const fetchAnnouncements = async () => {
     try {
@@ -87,36 +91,95 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     }
   };
 
-  const [issues, setIssues] = useState<Alert>([])
-  const fetchIssues = async ()=> {
+  const fetchPlans = async () => {
+    try {
+      const responce = await client(`/${type}/plans`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      // const PlansArray = responce.data.plans.map((plan: any) => plan.plan_name);
+      setPlans(responce.data.plans);
+    } catch (error: any) {
+      console.log(error);
+    }
+  };
+
+  const [issues, setIssues] = useState<Alert>([]);
+  const fetchIssues = async () => {
     try {
       const responce = await client.get(`/${type}/issues`, {
-        headers:{
-          Authorization: `Bearer ${accessToken}`
-        }
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
-      if(responce){
+      if (responce) {
         setIssues(responce.data.alert_ticket_list);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
-  }
+  };
+
+  const fetchEquipments = async () => {
+    try {
+      const response = await client.get(`/${type}/equipments`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+        },
+      });
+      setEquipments(response.data.equipments.reverse());
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+    }
+  };
+
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+
+  const fetchSchedule = async () => {
+    try {
+      const response = await client.get(`/${type}/electric-schedule`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      console.log(response.data.schedule);
+      if (response.data.schedule.length > 0) {
+        setScheduleData(response.data.schedule);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const [kwhPrice, setPrice] = useState<any>('0');
+
+  const fetchPrice = async () => {
+    try {
+      const response = await client.get(`/${type}/price`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setPrice(response.data.price);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const establishWebSocketConnection = () => {
     const newSocket = io(ioString);
-    setSocket(newSocket)
+    setSocket(newSocket);
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
-      setAnnouncements((prevAnnouncements) => [...prevAnnouncements, data]);
+      setAnnouncements(prevAnnouncements => [...prevAnnouncements, data]);
     });
 
     socket?.on('newIssue', data => {
-      setIssues((prev) => [data, ...prev]);
+      setIssues(prev => [data, ...prev]);
     });
   };
-
-
 
   return (
     <ScrollView
@@ -128,7 +191,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       <View style={styles.profitFeesContainer}>
         <Text style={styles.profitText}>Kwh Price</Text>
         <WhiteCard style={styles.amountContainer}>
-          <Text style={styles.amountText}>$ 56666</Text>
+          <Text style={styles.amountText}>$ {kwhPrice}</Text>
         </WhiteCard>
         <Text style={styles.profitText} numberOfLines={2}>
           Assigned Alerts
@@ -149,7 +212,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={announcements.slice(0,3)}
+              data={announcements.slice(0, 3)}
               scrollEnabled={false}
               renderItem={AnnouncementItem}
               ListFooterComponent={() =>
@@ -170,7 +233,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={issues?.slice(0,3)}
+              data={issues?.slice(0, 3)}
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>
@@ -180,7 +243,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           </WhiteCard>
         </Card>
       </View>
-      <Schedule />
+      <Schedule schedule={scheduleData} />
     </ScrollView>
   );
 };

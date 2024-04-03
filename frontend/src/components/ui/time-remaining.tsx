@@ -1,10 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import {StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import Card from './card';
-import { Colors } from '../../utils/colors';
+import {Colors} from '../../utils/colors';
 import client from '../../API/client';
-import { useUser } from '../../storage/use-user';
-import { useCountdown } from '../../hooks/use-countdown';
+import {useUser} from '../../storage/use-user';
+import {useCountdown} from '../../hooks/use-countdown';
 
 export type Schedule = {
   schedule_id: string;
@@ -16,65 +16,64 @@ export type Schedule = {
   }[];
 };
 
-const TimeRemaining = () => {
+const TimeRemaining = ({schedule}) => {
   const date = useCountdown();
-  const { type, accessToken } = useUser(state => state);
-  const [scheduleData, setScheduleData] = useState<Schedule[]>([]);
-
-  useEffect(() => {
-    fetchSchedule();
-  }, []);
-
-  const fetchSchedule = async () => {
-    try {
-      const response = await client.get(`/customer/electric-schedule`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      console.log(response.data.schedule);
-      if (response.data.schedule.length > 0) {
-        setScheduleData(response.data.schedule);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   const calculateRemainingTime = () => {
-    const currentTime = new Date().getTime();
-    let nextScheduleTime = Infinity;
+    const currentTime = new Date();
+    const currentTimeHours = currentTime.getHours();
+    const currentTimeMinutes = currentTime.getMinutes();
+    const currentTimeSeconds = currentTime.getSeconds();
 
-    for (const scheduleItem of scheduleData) {
+    for (const scheduleItem of schedule) {
       for (const item of scheduleItem.schedule) {
-        const startTime = new Date(item.time_to_turn_on).getTime();
-        const endTime = new Date(item.time_to_turn_off).getTime();
+        const startTime = new Date(item.time_to_turn_on);
+        const endTime = new Date(item.time_to_turn_off);
 
-        if (startTime <= currentTime && currentTime <= endTime) {
-          return formatTime(endTime - currentTime);
-        }
+        const startTimeHours = startTime.getHours();
+        const startTimeMinutes = startTime.getMinutes();
+        const startTimeSeconds = startTime.getSeconds();
 
-        if (currentTime < startTime && startTime < nextScheduleTime) {
-          nextScheduleTime = startTime;
+        const endTimeHours = endTime.getHours();
+        const endTimeMinutes = endTime.getMinutes();
+        const endTimeSeconds = endTime.getSeconds();
+
+        const elapsedStart =
+          startTimeHours * 3600 + startTimeMinutes * 60 + startTimeSeconds;
+        const elapsedEnd =
+          endTimeHours * 3600 + endTimeMinutes * 60 + endTimeSeconds;
+        const elapsedCur =
+          currentTimeHours * 3600 +
+          currentTimeMinutes * 60 +
+          currentTimeSeconds;
+
+        if (elapsedStart <= elapsedCur && elapsedCur <= elapsedEnd) {
+          const remaining = elapsedEnd - elapsedCur;
+          return formatElapsedTime(remaining);
+        } else if (elapsedCur < elapsedStart) {
+          const remaining = elapsedStart - elapsedCur;
+          return formatElapsedTime(remaining);
+        } else if (elapsedCur > elapsedEnd) {
+          const remaining = 24*3600 - elapsedCur + elapsedStart ;
+          return formatElapsedTime(remaining);
         }
       }
     }
 
-    return formatTime(nextScheduleTime - currentTime);
+    // If no schedule found for tomorrow, return default values
+    return '00:00:00';
   };
 
-  const formatTime = (time: number) => {
-    const hours = Math.floor(time / (1000 * 60 * 60));
-    const minutes = Math.floor((time % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((time % (1000 * 60)) / 1000);
-    return `${padZero(hours)} : ${padZero(minutes)} : ${padZero(seconds)}`;
-  };
-  
   const padZero = (num: number) => {
     return num < 10 ? `0${num}` : `${num}`;
   };
-  
+
+  function formatElapsedTime(elapsedTime) {
+    let hours = Math.floor(elapsedTime / 3600);
+    let minutes = Math.floor((elapsedTime % 3600) / 60);
+    let seconds = Math.floor(elapsedTime % 60);
+    return `${padZero(hours)} : ${padZero(minutes)} : ${padZero(seconds)}`;
+  }
 
   return (
     <Card style={styles.container}>
@@ -99,7 +98,7 @@ const styles = StyleSheet.create({
     color: Colors.Black,
   },
   time: {
-    fontSize: 32,
+    fontSize: 45,
     fontWeight: '700',
     color: Colors.Black,
   },

@@ -9,36 +9,27 @@ import {useUser} from '../storage/use-user';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SettingsForm = {
-  bio: string;
   username: string;
   password: string;
-  phoneNum: string;
 };
 
 const Settings = () => {
   const {type: userType, signOut} = useUser(state => state);
 
-  // WRAP THE FUNCITON WITH HANDLESUBMIT
-  // handleSubmit(func)
-  // IF IN CALLBACK EXACMPLE: () =>
-  // You have to write it as () => handleSubmit(func)()
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const {control, handleSubmit} = useForm<SettingsForm>({
-    defaultValues: {bio: '', password: '', phoneNum: '', username: ''},
+    defaultValues: {password: '', username: ''},
   });
 
-  // HANDLE BUTTON PRESSES HOWEVER YOU WANT
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function onSubmit(data: SettingsForm) {
-    // HERE
     console.log(data);
   }
 
   async function signingOut() {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('userType');
-    signOut()
+    signOut();
   }
+
   return (
     <View style={styles.screen}>
       <ScreenHeader>Profile</ScreenHeader>
@@ -66,7 +57,11 @@ const Settings = () => {
           textStyle={styles.elevatedButtonText}>
           Sign Out
         </ElevatedCard>
-        <ElevatedCard textStyle={styles.elevatedButtonText}>Save</ElevatedCard>
+        <ElevatedCard
+          textStyle={styles.elevatedButtonText}
+          onPress={handleSubmit(onSubmit)}>
+          Save
+        </ElevatedCard>
       </View>
       {userType === 'owner' && (
         <>

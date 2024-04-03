@@ -26,6 +26,9 @@ const {
   stopBillingEmp,
   calculateBillEmp,
   getPreviousMeterEmp,
+  assignSelf,
+  getEquipmentsEmp,
+  getPlansEmp,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -96,6 +99,9 @@ module.exports = function (io) {
   router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
   router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
 
+  //asign ticket
+  router.post('/issues/:id/assign', authenticateEmployeeToken, assignSelf)
+
   //alert replies
   router.post(
     "/issue/:id/reply/",
@@ -120,6 +126,12 @@ module.exports = function (io) {
 
   //Expenses
   router.get('/expenses', authenticateEmployeeToken, getEmployeeExpenses)
+
+
+  router.get("/equipments", authenticateEmployeeToken, getEquipmentsEmp);
+  router.get("/plans", authenticateEmployeeToken, getPlansEmp);
+
+
 
   return router;
 };

@@ -78,33 +78,59 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
   const [employeeFilters, setEmployeeFilters] = useState<string[]>([]);
   const [isBilling, setIsBilling] = useState(false);
 
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<User[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   // Fetch data when the component mounts or filters change
 
-  const fetchUsers = async () => {
-    console.log(usersType);
-    const responce = await client.get(`/${userType}/${usersType}`, {
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-      },
-    });
+  const [filteredUsers, setFilteredUsers] = useState<any[]>();
 
-    if (usersType == 'customers') {
-      setCustomers(
-        responce.data.customers.filter(
-          (customer: User) => {
-            if(isBilling && filters.includes("Done")){
-              return customer.is_cycled == true
-            }
-            else{
-              return customer.is_cycled == false
-            }
-          },
-        ),
+  useEffect(() => {
+    if (userType !== 'customer') {
+      let users;
+      usersType === 'customers' ? (users = customers) : (users = employees);
+      const filteredUsers = filter(searchQuery, users);
+      setFilteredUsers(filteredUsers);
+    }
+  }, [usersType, searchQuery]);
+
+  const filter = (searchQ: string, users: (User | Employee)[]) => {
+    if (!searchQ) {
+      if(usersType === 'employees' || userType === 'owner'){
+        users = employees;
+        return users
+      } 
+      else{
+        users = customers;
+        return users
+      }
+    }
+    if (searchQ) {
+      return users.filter(
+        user =>
+          user.username.toLowerCase().includes(searchQ.toLowerCase()) ||
+          user.name.toLowerCase().includes(searchQ.toLowerCase()),
       );
-    } else if (usersType == 'employees') {
-      setEmployees(responce.data.employees);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await client.get(`/${userType}/${usersType}`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (usersType === 'customers') {
+        setCustomers(response.data.customers);
+        setFilteredUsers(response.data.customers)
+      } else if (usersType === 'employees') {
+        setEmployees(response.data.employees);
+        setFilteredUsers(response.data.employees);
+      }
+    } catch (error) {
+      console.error(error);
+      // Handle error appropriately, maybe show an alert or set a default value for isBilling
     }
   };
 
@@ -166,7 +192,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       console.log('creating new socket');
     }
     if (socket) {
-      socket.on('newEmployee', (data: any) => {
+      socket.on('newEmployee', (data: Employee) => {
         setEmployees(prevEmps => [data, ...prevEmps]);
       });
 
@@ -226,31 +252,29 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
         </View>
         <SearchTextInput value={searchQuery} setValue={setSearchQuery} />
         <View style={styles.h10} />
-        {usersType === 'customers' ? (
-          <View style={styles.filtersContainer}>
-            {isBilling &&
-              USERS_FILTERS.map(item => (
-                <Card
-                  key={item}
-                  onPress={() => {
-                    const alreadySelected = filters.find(fil => fil === item);
+        <View style={styles.filtersContainer}>
+          {usersType === 'customers' &&
+            isBilling &&
+            USERS_FILTERS.map(item => (
+              <Card
+                key={item}
+                onPress={() => {
+                  const alreadySelected = filters.find(fil => fil === item);
 
-                    if (alreadySelected) {
-                      return setFilters(prevFilters => [
-                        ...prevFilters.filter(it => it !== item),
-                      ]);
-                    }
-                    return setFilters(prevFilters => [item]);
-                  }}
-                  selected={!!filters.find(fil => fil === item)}
-                  style={styles.cardContainer}>
-                  <Text style={styles.text}>{item}</Text>
-                </Card>
-              ))}
-          </View>
-        ) : (
-          <View style={styles.filtersContainer}>
-            {EMPLOYEE_FILTERS.map(item => (
+                  if (alreadySelected) {
+                    return setFilters(prevFilters =>
+                      prevFilters.filter(it => it !== item),
+                    );
+                  }
+                  return setFilters(prevFilters => [item]);
+                }}
+                selected={!!filters.find(fil => fil === item)}
+                style={styles.cardContainer}>
+                <Text style={styles.text}>{item}</Text>
+              </Card>
+            ))}
+          {usersType === 'employees' &&
+            EMPLOYEE_FILTERS.map(item => (
               <Card
                 key={item}
                 onPress={() => {
@@ -259,9 +283,9 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
                   );
 
                   if (alreadySelected) {
-                    return setEmployeeFilters(prevFilters => [
-                      ...prevFilters.filter(it => it !== item),
-                    ]);
+                    return setEmployeeFilters(prevFilters =>
+                      prevFilters.filter(it => it !== item),
+                    );
                   }
                   return setEmployeeFilters(prevFilters => [
                     ...prevFilters,
@@ -273,20 +297,19 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
                 <Text style={styles.text}>{item}</Text>
               </Card>
             ))}
-          </View>
-        )}
+        </View>
       </View>
       <View style={styles.h10} />
       <FlatList
         contentContainerStyle={styles.topItemsContainer}
-        data={usersType === 'customers' ? customers : employees}
-        renderItem={props => {
-          if (usersType === 'employees') {
-            return <EmployeeListItem {...props} />;
-          }
-
-          return <UserListItem {...props} isBilling={isBilling} />;
-        }}
+        data={filteredUsers}
+        renderItem={props =>
+          usersType === 'employees' ? (
+            <EmployeeListItem {...props} />
+          ) : (
+            <UserListItem {...props} isBilling={isBilling} />
+          )
+        }
         ItemSeparatorComponent={ListSeperator}
       />
     </View>
@@ -296,7 +319,11 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 export default UsersDashboard;
 
 const styles = StyleSheet.create({
-  elevatedCardText: {color: Colors.White, fontSize: 14, fontWeight: '700'},
+  elevatedCardText: {
+    color: Colors.White,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   elevatedCardBillingStyle: {
     position: 'absolute',
     padding: 5,

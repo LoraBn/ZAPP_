@@ -6,7 +6,7 @@ const updateProfileCustomer = async (req, res) => {
   try {
     const customerId = req.user.userId; // Updated variable name
     const ownerId = req.user.ownerId;
-    const { name, lastName, userName, password } = req.body;
+    const { userName, password } = req.body;
 
     // Check if the employee exists
     const customerExists = await pool.query(
@@ -22,8 +22,6 @@ const updateProfileCustomer = async (req, res) => {
 
     const existingCustomer = customerExists.rows[0];
 
-    const updatedName = name || existingCustomer.name;
-    const updatedLastName = lastName || existingCustomer.last_name;
     const updatedUserName = userName || existingCustomer.username;
     const updatedPassword = password
       ? await bcrypt.hash(password, 10)
@@ -32,12 +30,10 @@ const updateProfileCustomer = async (req, res) => {
     const updateQuery = {
       text: `
           UPDATE customers
-          SET name = $1, last_name = $2, username = $3, password_hash = $4
-          WHERE customer_id = $5
+          SET username = $1, password_hash = $2
+          WHERE customer_id = $3
           RETURNING customer_id, username`,
       values: [
-        updatedName,
-        updatedLastName,
         updatedUserName,
         updatedPassword,
         customerId,
@@ -191,12 +187,12 @@ const createSupportTicketCus = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
     const customerId = req.user.userId;
-    const {ticket_message } = req.body;
+    const { ticket_message } = req.body;
 
     const is_urgent = false;
 
     const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent) 
-        VALUES($1, $2, $3, $4)`;
+        VALUES($1, $2, $3, $4) RETURNING *`;
 
     const result = await pool.query(queryText, [
       ownerId,
@@ -206,8 +202,11 @@ const createSupportTicketCus = async (req, res) => {
     ]);
 
     if (result.rows.length > 0) {
-      let room = `cust${ownerId}`
-      req.app.get('io').to(room).emit('newTicket')
+      let room = `cust${ownerId}`;
+      req.app
+        .get("io")
+        .to(room)
+        .emit("newTicket", { ticketId: result.rows.ticket_id });
       res.status(201).json({
         ticket_id: result.rows[0].ticket_id,
         message: "Support ticket created successfully!",
@@ -226,7 +225,7 @@ const createSupportTicketCus = async (req, res) => {
 const closeSupportTicketCus = async (req, res) => {
   try {
     const customerId = req.user.userId;
-    const ownerId =  req.user.ownerId;
+    const ownerId = req.user.ownerId;
     const ticketId = req.params.id;
 
     // Check if the support ticket exists and is owned by the provided customer
@@ -256,8 +255,8 @@ const closeSupportTicketCus = async (req, res) => {
     const closeResult = await pool.query(closeQuery);
 
     if (closeResult.rowCount > 0) {
-      let room = `cust${ownerId}`
-      req.app.get('io').to(room).emit('closeTicket', {ticketId})
+      let room = `cust${ownerId}`;
+      req.app.get("io").to(room).emit("closeTicket", { ticket_id: ticketId });
       res.status(200).json({
         ticket_id: closeResult.rows[0].ticket_id,
         message: "Support ticket closed successfully!",
@@ -274,14 +273,44 @@ const closeSupportTicketCus = async (req, res) => {
 const getKwhPriceCus = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
-    const queryText =
-      "SELECT * FROM kwh_prices  WHERE owner_id = $1 RETURNING price_id";
-    const results = pool.query(queryText, [ownerId]);
-    res.status(200).json({ price: results[0] });
-  } catch (error) {}
-  console.error("Error fetching plans:", error);
-  res.status(500).json({ error_message: "Internal Server Error" });
+    const queryText = "SELECT * FROM kwh_prices  WHERE owner_id = $1";
+    const results = await pool.query(queryText, [ownerId]);
+    if (results.rows.length > 0) {
+      res.status(200).json({ price: results.rows[0].kwh_price });
+    } else {
+      res.status(404).json({ error_message: "KWH price not found" });
+    }
+  } catch (error) {
+    console.error("Error fetching price:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
 };
+
+const fetchRemaining = async (req, res) => {
+  try {
+    const customerId = req.user.userId;
+
+    const queryText = `
+      SELECT remaining_amount 
+      FROM bills 
+      WHERE customer_id = $1 
+      ORDER BY billing_date DESC 
+      LIMIT 1
+    `;
+
+    const { rows } = await pool.query(queryText, [customerId]);
+
+    if (rows.length > 0) {
+      res.status(200).json({ remaining_amount: rows[0].remaining_amount });
+    } else {
+      res.status(404).json({ error_message: "No remaining amount found" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
 
 const getAllTicketRepliesCus = async (req, res) => {
   try {
@@ -358,7 +387,7 @@ const createReplyCus = async (req, res) => {
       const userType = isSentByOwner ? "owner" : "customer";
 
       let room = `cust${ownerId}`;
-      req.app.get('io').to(room).emit('newTicketReply', {customerId});
+      req.app.get("io").to(room).emit("newTicketReply", { customerId });
 
       res.status(201).json({
         replyId: reply_id,
@@ -387,4 +416,5 @@ module.exports = {
   getAllTicketRepliesCus,
   createReplyCus,
   getKwhPriceCus,
+  fetchRemaining,
 };
