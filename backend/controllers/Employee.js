@@ -8,7 +8,7 @@ const updateProfile = async (req, res) => {
   try {
     const employeeId = req.user.userId; // Updated variable name
     const ownerId = req.user.ownerId;
-    const { name, lastName, userName, password } = req.body;
+    const {username, password } = req.body;
 
     // Check if the employee exists
     const employeeExists = await pool.query(
@@ -24,9 +24,7 @@ const updateProfile = async (req, res) => {
 
     const existingEmployee = employeeExists.rows[0];
 
-    const updatedName = name || existingEmployee.name;
-    const updatedLastName = lastName || existingEmployee.last_name;
-    const updatedUserName = userName || existingEmployee.username;
+    const updatedUserName = username || existingEmployee.username;
     const updatedPassword = password
       ? await bcrypt.hash(password, 10)
       : existingEmployee.password_hash;
@@ -34,12 +32,10 @@ const updateProfile = async (req, res) => {
     const updateQuery = {
       text: `
         UPDATE employees
-        SET name = $1, last_name = $2, username = $3, password_hash = $4
-        WHERE employee_id = $5
+        SET username = $1, password_hash = $2
+        WHERE employee_id = $3
         RETURNING employee_id, username`,
       values: [
-        updatedName,
-        updatedLastName,
         updatedUserName,
         updatedPassword,
         employeeId,
@@ -979,6 +975,29 @@ const closeAlertTicketEmp = async (req, res) => {
   }
 };
 
+const getAssignedTicketsEmp = async (req, res) => {
+  try {
+    const employeeId = req.user.userId;
+
+    const query = `
+      SELECT alerts.*
+      FROM assigned_alerts
+      JOIN alerts ON assigned_alerts.alert_id = alerts.alert_id
+      WHERE assigned_alerts.employee_id = $1
+      AND alerts.is_closed = false;
+    `;
+
+    // Assuming you have defined pool somewhere in your code
+    const { rows } = await pool.query(query, [employeeId]);
+
+    res.status(200).json({ assigned_alerts: rows });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+
 
 const assignSelf = async (req, res) => {
   try {
@@ -1137,6 +1156,7 @@ module.exports = {
   getAlertTicketEmp,
   createAlertTicketEmp,
   createAlertReplyEmp,
+  getAssignedTicketsEmp,
   getAllAlertRepliesEmp,
   getAnnouncementsEmp,
   getElectricScheduleEmp,

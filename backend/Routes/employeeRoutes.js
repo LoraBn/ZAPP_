@@ -29,6 +29,7 @@ const {
   assignSelf,
   getEquipmentsEmp,
   getPlansEmp,
+  getAssignedTicketsEmp,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -98,6 +99,8 @@ module.exports = function (io) {
   router.get("/issues/:id", authenticateEmployeeToken, getAlertTicketEmp);
   router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
   router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
+
+  router.get('/assigned-issues', authenticateEmployeeToken, getAssignedTicketsEmp)
 
   //asign ticket
   router.post('/issues/:id/assign', authenticateEmployeeToken, assignSelf)

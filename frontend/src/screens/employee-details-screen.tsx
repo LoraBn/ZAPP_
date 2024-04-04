@@ -110,14 +110,38 @@ const EmployeeDetailsScreen = ({
         const chunkedExpenses = chunkArray(expenses, 4);
         setExpenses(chunkedExpenses);
       }
+      else{
+        setExpenses([[{amount: 'No expenses found'}]])
+      }
     } catch (error: any) {
+      setExpenses([[{amount: 'No expenses found'}]])
       console.log(error);
-      Alert.alert(error.message);
     }
   };
 
+  const [assignedAlerts, setAssignedAlerts] = useState<Alert[]>();
+
+
+  const fetchAssignedAlerts = async () => {
+    try {
+      const response = client.get(`/${type}/assigned-issues/${employee.employee_id}`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+
+      if((await response).data){
+        const chunkedAlerts = chunkArray(await (await response).data.assigned_alerts, 4);
+        setAssignedAlerts(chunkedAlerts)
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
 
   useEffect(() => {
+    fetchAssignedAlerts()
     fetchExpenses();
   }, []);
 
@@ -165,7 +189,7 @@ const EmployeeDetailsScreen = ({
           </View>
           <Animated.FlatList
             horizontal
-            data={[DUMMY_ASSIGNMENTS, DUMMY_ASSIGNMENTS_2]}
+            data={assignedAlerts}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             style={styles.containerFlatListStyle}
@@ -181,7 +205,7 @@ const EmployeeDetailsScreen = ({
             }}
           />
           <CarouselIndicators
-            items={[DUMMY_ASSIGNMENTS, DUMMY_ASSIGNMENTS_2]}
+            items={assignedAlerts}
             animatedIndex={assignmentScrollOffsetX}
           />
         </View>

@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Alert, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {Colors} from '../utils/colors';
 import ScreenHeader from '../components/ui/screen-header';
@@ -7,6 +7,7 @@ import {useForm} from 'react-hook-form';
 import ElevatedCard from '../components/ui/elevated-card';
 import {useUser} from '../storage/use-user';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import client from '../API/client';
 
 type SettingsForm = {
   username: string;
@@ -14,14 +15,34 @@ type SettingsForm = {
 };
 
 const Settings = () => {
-  const {type: userType, signOut} = useUser(state => state);
+  const {type, signOut, accessToken,setAccessToken} = useUser(state => state);
 
   const {control, handleSubmit} = useForm<SettingsForm>({
     defaultValues: {password: '', username: ''},
   });
 
-  function onSubmit(data: SettingsForm) {
-    console.log(data);
+  async function onSubmit(data: SettingsForm) {
+    console.log(type);
+    try {
+      const response =  await client.put(`${type}/profile`, data, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+
+      if(response.data.token){
+        setAccessToken(response.data.token);
+        await AsyncStorage.removeItem('token');
+
+        await AsyncStorage.setItem('token', response.data.token)
+
+        Alert.alert(response.data.message)
+      }
+
+      
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   async function signingOut() {
@@ -63,7 +84,7 @@ const Settings = () => {
           Save
         </ElevatedCard>
       </View>
-      {userType === 'owner' && (
+      {type === 'owner' && (
         <>
           <ScreenHeader>Danger Zone</ScreenHeader>
           <ElevatedCard

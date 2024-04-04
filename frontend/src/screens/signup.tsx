@@ -1,5 +1,5 @@
 import {Alert, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
 import {useForm} from 'react-hook-form';
@@ -23,9 +23,36 @@ type SignUpForm = {
 type SignUpProps = StackScreenProps<AuthStackParams, 'Signup'>;
 
 const SignUp = ({navigation}: SignUpProps) => {
+
+
   const {setAccessToken, setExpiresAtToken, setRefreshToken, setType} = useUser(
     state => state,
   );
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const userType = await AsyncStorage.getItem('userType');
+        if (token && userType) {
+          const response = await client.get('/auth', {
+            headers: {
+              authorization: `Bearer ${token}`,
+              type: userType,
+            },
+          });
+          if (response.data.success) {
+            console.log(userType)
+            setType(userType);
+            setAccessToken(token);
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const {control, handleSubmit} = useForm<SignUpForm>({
     defaultValues: {
@@ -63,7 +90,6 @@ const SignUp = ({navigation}: SignUpProps) => {
         setRefreshToken('MockTokenRefresh');
         setExpiresAtToken(dayjs().unix()); // No need to pass new Date() to dayjs() as it defaults to current date and time
         setType('owner');
-        // Navigate to some success screen or perform other actions upon successful signup
       }
     } catch (error) {
       console.log(error);

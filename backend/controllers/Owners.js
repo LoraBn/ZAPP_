@@ -55,7 +55,7 @@ const ownerSignUp = async (req, res) => {
 const ownerUpdate = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { name, lastName, userName, password } = req.body;
+    const {username, password } = req.body;
 
     // Check if the owner exists
     const ownerExists = await pool.query(
@@ -71,9 +71,7 @@ const ownerUpdate = async (req, res) => {
 
     const existingOwner = ownerExists.rows[0];
 
-    const updatedName = name || existingOwner.name;
-    const updatedLastName = lastName || existingOwner.last_name;
-    const updatedUserName = userName || existingOwner.username;
+    const updatedUserName = username || existingOwner.username;
     const updatedPassword = password
       ? await bcrypt.hash(password, 10)
       : existingOwner.password_hash;
@@ -81,12 +79,10 @@ const ownerUpdate = async (req, res) => {
     const updateQuery = {
       text: `
         UPDATE owners
-        SET name = $1, last_name = $2, username = $3, password_hash = $4
-        WHERE owner_id = $5
+        SET username = $1, password_hash = $2
+        WHERE owner_id = $3
       `,
       values: [
-        updatedName,
-        updatedLastName,
         updatedUserName,
         updatedPassword,
         userId,
@@ -439,19 +435,24 @@ const updateCustomerAccount = async (req, res) => {
 const deleteCustomer = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const customerUserName = req.params.username;
+    const customerId = req.params.id;
 
     const checkCustomerQuery =
-      "SELECT * FROM customers WHERE owner_id = $1 AND username = $2";
+      "SELECT * FROM customers WHERE owner_id = $1 AND customer_id = $2";
     const checkCustomerResult = await pool.query(checkCustomerQuery, [
       ownerId,
-      customerUserName,
+      customerId,
     ]);
 
     if (checkCustomerResult.rows.length > 0) {
+      // Delete related records first
+      await deleteRelatedRecords(customerId);
+
+      // Now delete the customer record
       const deleteCustomerQuery =
-        "DELETE FROM customers WHERE owner_id = $1 AND username = $2";
-      await pool.query(deleteCustomerQuery, [ownerId, customerUserName]);
+        "DELETE FROM customers WHERE owner_id = $1 AND customer_id = $2";
+      await pool.query(deleteCustomerQuery, [ownerId, customerId]);
+
       res.status(202).json({ message: "User deleted successfully" });
     } else {
       res.status(404).json({ error_message: "User not found" });
@@ -461,6 +462,21 @@ const deleteCustomer = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
+// Function to delete related records
+const deleteRelatedRecords = async (customerId) => {
+  try {
+    // Delete records from related tables
+    await Promise.all([
+      pool.query("DELETE FROM bills WHERE customer_id = $1", [customerId]),
+      pool.query("DELETE FROM support_tickets WHERE customer_id = $1", [customerId]),
+      pool.query("DELETE FROM support_tickets_replies WHERE customer_id = $1", [customerId])
+    ]);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
 const createEquipment = async (req, res) => {
   const { name, price, description, status } = req.body;
@@ -1266,20 +1282,23 @@ const createBill = async (req, res) => {
     const cycleId = activeCycleResult.rows[0].cycle_id;
 
     const existingBillQuery = `
-      SELECT COUNT(*) AS bill_count
+      SELECT bill_id, remaining_amount
       FROM bills
       WHERE customer_id = $1
-      AND cycle_id = $2
     `;
-    const existingBillResult = await pool.query(existingBillQuery, [
-      customerId,
-      cycleId,
+    const existingBillsResult = await pool.query(existingBillQuery, [
+      customerId
     ]);
-    if (existingBillResult.rows[0].bill_count > 0) {
-      return res.status(400).json({
-        error_message:
-          "A bill already exists for the customer in the current billing cycle.",
-      });
+
+    // Update existing bills to PAID if they were not already paid
+    for (const existingBill of existingBillsResult.rows) {
+      if (existingBill.remaining_amount > 0) {
+        await pool.query(`
+          UPDATE bills
+          SET billing_status = 'PAID'
+          WHERE bill_id = $1
+        `, [existingBill.bill_id]);
+      }
     }
 
     const remaining_amount = total_amount - amount_paid;
@@ -1328,6 +1347,7 @@ const createBill = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getPreviousMeter = async (req, res) => {
   try {
@@ -1672,7 +1692,7 @@ const getExpensesOfEmp = async (req, res) => {
     if (expenseResults.rowCount) {
       res.status(200).json({ expenses: expenseResults.rows });
     } else {
-      res.sendStatus(405).json({ expenses: "No Expenses Found" });
+      res.status(405).json({ expenses: "No Expenses Found" });
     }
   } catch (error) {
     console.log(error);
@@ -2418,6 +2438,27 @@ const deleteAlertTicket = async (req, res) => {
   }
 };
 
+const getAssignedTickets = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const employeeId = req.params.id;
+
+    const query = `
+      SELECT alerts.*
+      FROM assigned_alerts
+      JOIN alerts ON assigned_alerts.alert_id = alerts.alert_id
+      WHERE assigned_alerts.employee_id = $1;
+    `;
+
+    const { rows } = await pool.query(query, [employeeId]);
+    
+    res.status(200).json({ assigned_alerts: rows });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+}
+
 const getAlertTicket = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2944,4 +2985,5 @@ module.exports = {
   getAllAlertReplies,
   createAlertReply,
   getBillsAnalytics,
+  getAssignedTickets,
 };

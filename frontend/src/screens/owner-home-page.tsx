@@ -284,6 +284,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   const establishWebSocketConnection = () => {
     const newSocket = io(ioString);
     setSocket(newSocket);
+
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
       setAnnouncements(prevAnnouncements => [...prevAnnouncements, data]);
@@ -363,7 +364,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
               data={
                 equipments.length
                   ? equipments.slice(0, 3)
-                  : [{name: 'No equipment'}]
+                  : [{name: 'NO EQUIPMENT'}]
               }
               scrollEnabled={false}
               renderItem={EquipmentItem}
@@ -385,7 +386,8 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={issues.slice(0, 3)}
+              data={issues.length? issues.slice(0, 3):
+                [{created_by: "NO ALERTS"}]}
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>

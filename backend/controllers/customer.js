@@ -6,7 +6,7 @@ const updateProfileCustomer = async (req, res) => {
   try {
     const customerId = req.user.userId; // Updated variable name
     const ownerId = req.user.ownerId;
-    const { userName, password } = req.body;
+    const { username, password } = req.body;
 
     // Check if the employee exists
     const customerExists = await pool.query(
@@ -22,7 +22,7 @@ const updateProfileCustomer = async (req, res) => {
 
     const existingCustomer = customerExists.rows[0];
 
-    const updatedUserName = userName || existingCustomer.username;
+    const updatedUserName = username || existingCustomer.username;
     const updatedPassword = password
       ? await bcrypt.hash(password, 10)
       : existingCustomer.password_hash;

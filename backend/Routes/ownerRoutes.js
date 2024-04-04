@@ -65,6 +65,7 @@ const {
   checkActiveBillingCycle,
   calculateProfit,
   getBillsAnalytics,
+  getAssignedTickets,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -105,7 +106,7 @@ module.exports = function (io) {
     authenticateOwnerToken,
     updateCustomerAccount
   );
-  router.delete("/customers/:username", authenticateOwnerToken, deleteCustomer);
+  router.delete("/customers/:id", authenticateOwnerToken, deleteCustomer);
 
   //employees
   router.get("/employees", authenticateOwnerToken, getEmployeeList);
@@ -216,12 +217,16 @@ module.exports = function (io) {
   router.post("/issues", authenticateOwnerToken, createAlertTicket);
   router.delete("/issues/:id", authenticateOwnerToken, deleteAlertTicket);
 
+  router.get('/assigned-issues/:id', authenticateOwnerToken, getAssignedTickets)
+
   //alert replies
   router.post("/issue/:id/reply", authenticateOwnerToken, createAlertReply);
   router.get("/issue/:id/reply", authenticateOwnerToken, getAllAlertReplies);
 
   //analytics
   router.get('/analytics/bills', authenticateOwnerToken, getBillsAnalytics);
+
+
 
   return router;
 };

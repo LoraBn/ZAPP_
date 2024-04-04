@@ -94,10 +94,10 @@ const UserDetailsScreen = ({
     establishWebSocketConnection();
   }, []);
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchPreviousMeter();
     fetchAllBills();
-  },[refresh])
+  }, [refresh]);
 
   const fetchPreviousMeter = async () => {
     try {
@@ -121,6 +121,22 @@ const UserDetailsScreen = ({
       console.log(error);
     }
   };
+
+  async function deleteUser() {
+    try {
+      const response = client.delete(`/${type}/customers/${user.customer_id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if ((await response).data.message) {
+        Alert.alert('account Deleted');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   const [bills, setBills] = useState<Bill>();
   const [chunckedBills, setChunkedBills] = useState<any>([]);
@@ -198,26 +214,22 @@ const UserDetailsScreen = ({
     }
   }
 
- 
-
   const establishWebSocketConnection = () => {
     if (!socket) {
       const newSocket = io(ioString);
       setSocket(newSocket);
       console.log('Creating new socket');
     }
-  
+
     if (socket) {
-      socket.on("newBill", (data) => {
+      socket.on('newBill', data => {
         console.log('New bill received:', data);
         if (user.customer_id === data.customer_id) {
-        setRefresh(prev=> !prev);
+          setRefresh(prev => !prev);
         }
       });
     }
   };
-  
-  
 
   async function onCalulate(data: AddBillForm) {
     console.log(data);
@@ -252,7 +264,23 @@ const UserDetailsScreen = ({
           }>
           <Image source={{uri: ImageStrings.EditIcon, height: 43, width: 43}} />
         </Pressable>
-        <Image source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}} />
+        {type === 'owner' &&
+          <Pressable
+          onPress={() => {
+            Alert.alert(
+              `Delete customer ${user.username}`,
+              `Are you Sure?\nthis will delete all the customer records`,
+              [
+                {text: 'Yes', onPress: () => deleteUser()},
+                {text: 'Cancel', onPress: () => console.log('canceled')},
+              ],
+              {cancelable: true},
+            );
+          }}>
+          <Image
+            source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
+          />
+        </Pressable>}
       </View>
       <ScrollView
         style={styles.screen}
@@ -431,7 +459,9 @@ const UserDetailsScreen = ({
               <Text style={styles.text}>Total Amount:</Text>
               <View style={styles.infoStyle}>
                 <Text style={styles.infoText}>
-                  {bills && bills.length > 0 ? `${bills[0].total_amount} $` : 'None'}
+                  {bills && bills.length > 0
+                    ? `${bills[0].total_amount} $`
+                    : 'None'}
                 </Text>
               </View>
             </View>

@@ -1,5 +1,5 @@
 import {Image, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
 import {useForm} from 'react-hook-form';
@@ -41,8 +41,9 @@ const Signin = ({navigation}: SigninProps) => {
             },
           });
           if (response.data.success) {
-            setTimeout(()=>setType(userType),2000)
-            setTimeout(()=>setAccessToken(token), 2000);
+            console.log(userType)
+            setType(userType);
+            setAccessToken(token);
           }
         }
       } catch (error) {
@@ -62,7 +63,7 @@ const Signin = ({navigation}: SigninProps) => {
       });
 
       // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
-      if (responce.data.userId) {
+      if (await responce.data.userId) {
         await AsyncStorage.setItem('token', responce.data.token);
         await AsyncStorage.setItem('userType', responce.data.userType);
         const userType = responce.data.userType;

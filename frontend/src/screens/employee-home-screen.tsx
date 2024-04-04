@@ -76,7 +76,28 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     fetchPrice();
     fetchEquipments();
     fetchPlans()
+    fetchAssignedAlerts()
   }, [refresh]);
+
+  const [assignedAlerts, setAssignedAlerts] = useState<Alert[]>();
+
+
+  const fetchAssignedAlerts = async () => {
+    try {
+      const response = client.get(`/${type}/assigned-issues`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+
+      if((await response).data){
+        setAssignedAlerts((await response).data.assigned_alerts);
+        console.log((await response).data.assigned_alerts)
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
   const fetchAnnouncements = async () => {
     try {
@@ -198,7 +219,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
         </Text>
         <WhiteCard
           style={[styles.amountContainer, {backgroundColor: Colors.White}]}>
-          <Text style={styles.amountText}>3</Text>
+          <Text style={styles.amountText}>{assignedAlerts?.length || '0'}</Text>
         </WhiteCard>
       </View>
       <View>

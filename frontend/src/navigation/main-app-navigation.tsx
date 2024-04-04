@@ -18,7 +18,6 @@ const MainStackNavigator = createStackNavigator<MainAppNavigationParams>();
 export default function MainStackNavigation() {
   const {accessToken, type} = useUser(state => state);
 
-  console.log(type);
   return (
     <MainStackNavigator.Navigator screenOptions={{headerShown: false}}>
       {!accessToken ? (

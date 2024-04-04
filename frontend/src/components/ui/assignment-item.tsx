@@ -2,19 +2,19 @@ import {StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {Colors} from '../../utils/colors';
 import {formatDate} from '../../utils/date-utils';
-import {Assignment} from '../../screens/employee-details-screen';
+import { ALERT} from '../../screens/user-alert-system';
 
 type AssignmentItemProps = {
-  item: Assignment;
+  item: ALERT;
   index: number;
 };
 
 const AssignmentItem = ({item}: AssignmentItemProps) => {
   return (
     <View style={[styles.container]}>
-      <Text style={styles.text}>{item.title}</Text>
-      <Text style={styles.text}>{formatDate(item.date)}</Text>
-      <Text style={styles.text}>{item.status}</Text>
+      <Text style={styles.text}>{item.alert_type}</Text>
+      <Text style={styles.text}>{formatDate(item.created_at)}</Text>
+      <Text style={styles.text}>{item.is_closed ? 'Closed': 'Open'}</Text>
     </View>
   );
 };
