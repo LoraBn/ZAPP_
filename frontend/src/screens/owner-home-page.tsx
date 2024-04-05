@@ -170,7 +170,6 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   useEffect(() => {
     fetchAnnouncements();
     fetchEquipments();
-    fetchPlans();
     establishWebSocketConnection();
     fetchEmployees();
     fetchIssues();
@@ -187,6 +186,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   useEffect(() => {
     fetchProfit();
     fetchPrice();
+    fetchPlans()
   }, [refresh]);
 
   const fetchPlans = async () => {

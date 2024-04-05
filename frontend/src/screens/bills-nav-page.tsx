@@ -18,7 +18,6 @@ import {BillingStackNavigatorParams} from '../navigation/billing-stack-navigatio
 import SubscriptionPlanItem from '../components/ui/subscription-plan-item';
 import ExpensesItem from '../components/ui/expenses-item';
 import {User} from './users-dashboard';
-import {DUMMY_USERS} from './billing-management';
 import BillsItem from '../components/ui/bills-item';
 import client from '../API/client';
 import {useUser} from '../storage/use-user';
@@ -54,38 +53,8 @@ export type Bill = {
   date: Date;
 };
 
-export const NAMES = ['Simon', 'Jeoffrey', 'Barratheon', 'Linda', 'Stark'];
-
-export const DUMMY_BILLS: Bill[] = [
-  {
-    id: 1,
-    amount: 100,
-    date: new Date('2023-03-23'),
-    status: 'Paid',
-    user: DUMMY_USERS[0],
-  },
-  {
-    id: 2,
-    amount: 200,
-    date: new Date('2023-03-23'),
-    status: 'Paid',
-    user: DUMMY_USERS[0],
-  },
-  {
-    id: 3,
-    amount: 300,
-    date: new Date('2023-04-23'),
-    status: 'Paid',
-    user: DUMMY_USERS[0],
-  },
-  {id: 4, amount: 400, date: new Date(), status: 'Paid', user: DUMMY_USERS[0]},
-  {id: 5, amount: 500, date: new Date(), status: 'Paid', user: DUMMY_USERS[0]},
-];
-
 const BillsNavPage = ({navigation}: BillsNavPageProps) => {
   const insets = useSafeAreaInsets();
-
-  const isPaid = false;
 
   const {setSocket, socket, accessToken, type} = useUser(state => state);
 
@@ -142,7 +111,6 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
 
       if (responce) {
         setBills(responce.data.bills);
-        console.log(bills);
       }
     } catch (error) {
       console.log(error);
@@ -189,7 +157,6 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
       });
       if (responce) {
         setProfit(parseInt(responce.data.profit));
-        console.log(profit);
       }
     } catch (error) {
       console.log(error);
@@ -204,13 +171,11 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
     }
     if (socket) {
       socket.on('newEquipment', (data: any) => {
-        console.log('New equipmenet added:', data);
         setEquipments(prevEquipments => [data, ...prevEquipments]);
       });
 
       //equipments
       socket.on('updateEquipment', (data: any) => {
-        console.log('Im here');
         const {oldName, name, price, description, status} = data;
         const newEq = {name, price, description, status};
         setEquipments(prevEquipments => {
@@ -279,7 +244,6 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
     }
   };
 
-  // CHANGE DATA FROM API..
   return (
     <ScrollView
       contentContainerStyle={[

@@ -109,30 +109,24 @@ type CustomerHomeScreenProps = StackScreenProps<
 const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
   const insets = useSafeAreaInsets();
 
-  const isPaid = false;
-
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const {socket, setSocket, accessToken,type} = useUser(state => state);
+  const {socket, setSocket, accessToken, type} = useUser(state => state);
 
-  const [refresh, setRefresh] = useState<boolean>(false)
-  
+  const [refresh, setRefresh] = useState<boolean>(false);
+
   useEffect(() => {
-     
-      establishWebSocketConnection();
-
+    establishWebSocketConnection();
   }, []);
 
-
-  useEffect(()=>{
-    fetchSchedule()
-    fetchAnnouncements()
-    fetchPrice()
-    fetchRemaining()
-  }, [refresh])
-
+  useEffect(() => {
+    fetchSchedule();
+    fetchAnnouncements();
+    fetchPrice();
+    fetchRemaining();
+  }, [refresh]);
 
   const [price, setPrice] = useState<any>('0');
- 
+
   const fetchPrice = async () => {
     try {
       const response = await client.get(`/${type}/price`, {
@@ -146,22 +140,20 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
     }
   };
 
-  const [remaining, setRemaining] = useState<any>()
+  const [remaining, setRemaining] = useState<any>();
 
   const fetchRemaining = async () => {
     try {
       const response = await client.get(`${type}/remaining`, {
         headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
-      if(response){
-        setRemaining(response.data.remaining_amount)
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (response) {
+        setRemaining(response.data.remaining_amount);
       }
-    } catch (error) {
-      
-    }
-  }
+    } catch (error) {}
+  };
 
   const [scheduleData, setScheduleData] = useState<any[]>([]);
 
@@ -196,15 +188,24 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
   };
 
   const establishWebSocketConnection = () => {
+    let newSocket = socket;
     if (!socket) {
-      const newSocket = io(ioString);
+      newSocket = io(ioString);
       setSocket(newSocket);
     }
-    if (socket) {
-      socket.on('newAnnouncement', (data: any) => {
+    if (newSocket) {
+      newSocket.on('newAnnouncement', (data: any) => {
         console.log('New announcement received:', data);
         setAnnouncements(prevAnnouncements => [data, ...prevAnnouncements]);
       });
+
+      newSocket.on('ScheduleUpdate', (data: any) => {
+        setRefresh(prev => !prev);
+      });
+
+      newSocket.on('newPrice', (data)=>{
+        setRefresh(prev => !prev)
+      })
     }
   };
 
@@ -226,7 +227,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
         <WhiteCard
           style={[
             styles.amountContainer,
-            {backgroundColor: isPaid ? Colors.Green : Colors.White},
+            {backgroundColor: Colors.White},
           ]}>
           <Text style={styles.amountText}>$ {remaining || 0}</Text>
         </WhiteCard>
@@ -252,7 +253,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           </WhiteCard>
         </Card>
       </View>
-      <TimeRemaining schedule={scheduleData}/>
+      <TimeRemaining schedule={scheduleData} />
       <Schedule schedule={scheduleData} />
     </ScrollView>
   );

@@ -32,6 +32,7 @@ import {useUser} from '../storage/use-user';
 import BillItem from '../components/ui/bill-item';
 import {chunkArray} from './employee-details-screen';
 import {ioString} from '../API/io';
+import { io } from 'socket.io-client';
 
 type UserDetailsScreenProps = StackScreenProps<
   UsersStackNavigationParams,

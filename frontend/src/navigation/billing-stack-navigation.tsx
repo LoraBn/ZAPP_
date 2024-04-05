@@ -1,9 +1,7 @@
 import {createStackNavigator} from '@react-navigation/stack';
 import React from 'react';
-import BillingManagement from '../screens/billing-management';
 import {User} from '../screens/users-dashboard';
 import UserDetailsScreen from '../screens/user-details-screen';
-import BillingAfterChoosingUser from '../screens/billing-after-choosing-user';
 import Equipments from '../screens/equipments';
 import BillsNavPage from '../screens/bills-nav-page';
 import SubscriptionPlans from '../screens/subscription-plans';
@@ -12,9 +10,7 @@ import Bills from '../screens/bills';
 
 export type BillingStackNavigatorParams = {
   BillsNavPage: undefined;
-  BillingManagement: undefined;
   UserDetails: {user: User};
-  BillingAfterChoosingUser: {user: User};
   Equipments: undefined;
   SubscriptionPlans: undefined;
   Expenses: undefined;
@@ -32,16 +28,8 @@ export default function BillingStackNavigation() {
         component={BillsNavPage}
       />
       <BillingStackNavigator.Screen
-        name="BillingManagement"
-        component={BillingManagement}
-      />
-      <BillingStackNavigator.Screen
         name="UserDetails"
         component={UserDetailsScreen}
-      />
-      <BillingStackNavigator.Screen
-        name="BillingAfterChoosingUser"
-        component={BillingAfterChoosingUser}
       />
       <BillingStackNavigator.Screen name="Equipments" component={Equipments} />
       <BillingStackNavigator.Screen

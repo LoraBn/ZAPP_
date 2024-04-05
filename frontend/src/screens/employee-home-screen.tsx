@@ -25,28 +25,6 @@ import {useUser} from '../storage/use-user';
 import AnnouncementItem from '../components/alerts/announcement-item';
 import {ioString} from '../API/io';
 
-export const DUMMY_ALERTS = [
-  {
-    id: 1,
-    user: {name: 'Owner'},
-    alert: 'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
-    date: new Date(),
-  },
-  {
-    id: 2,
-    user: {name: 'User'},
-    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
-    date: new Date(),
-  },
-  {
-    id: 3,
-    user: {name: 'User'},
-    alert:
-      'Lorem ipsum dolor dolor dolor dolor samira  dolor dolor dolor dolor',
-    date: new Date(),
-  },
-];
-
 type EmployeeHomeScreenProps = StackScreenProps<
   EmployeeHomeStackNavigationParams,
   'HomeScreen'
@@ -56,7 +34,8 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   const insets = useSafeAreaInsets();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   // const [socket, setSocket] = useState<any>(null);
-  const {setSocket, socket, accessToken, type, setEquipments, setPlans} = useUser(state => state);
+  const {setSocket, socket, accessToken, type, setEquipments, setPlans} =
+    useUser(state => state);
 
   useEffect(() => {
     establishWebSocketConnection();
@@ -75,29 +54,28 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     fetchSchedule();
     fetchPrice();
     fetchEquipments();
-    fetchPlans()
-    fetchAssignedAlerts()
+    fetchPlans();
+    fetchAssignedAlerts();
   }, [refresh]);
 
   const [assignedAlerts, setAssignedAlerts] = useState<Alert[]>();
-
 
   const fetchAssignedAlerts = async () => {
     try {
       const response = client.get(`/${type}/assigned-issues`, {
         headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-      if((await response).data){
+      if ((await response).data) {
         setAssignedAlerts((await response).data.assigned_alerts);
-        console.log((await response).data.assigned_alerts)
+        console.log((await response).data.assigned_alerts);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
-  }
+  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -190,15 +168,65 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
   };
 
   const establishWebSocketConnection = () => {
-    const newSocket = io(ioString);
-    setSocket(newSocket);
+    let newSocket = socket;
+    if (!socket) {
+      newSocket = io(ioString);
+      setSocket(newSocket);
+    }
+
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
       setAnnouncements(prevAnnouncements => [...prevAnnouncements, data]);
     });
 
-    socket?.on('newIssue', data => {
+    newSocket?.on('newIssue', data => {
       setIssues(prev => [data, ...prev]);
+    });
+
+    newSocket?.on('ScheduleUpdate', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+
+    newSocket?.on('newPlan', (data: any) => {
+      console.log(data);
+      setPlans(prevPlans => [data, ...prevPlans]);
+    });
+    newSocket?.on('updatePlan', (data: any) => {
+      const {plan_id} = data;
+      setPlans(prevPlans => {
+        const filtered = prevPlans.filter(item => item.plan_id != plan_id);
+        return [data, ...filtered];
+      });
+    });
+    newSocket?.on('deletePlan', (data: any) => {
+      const {plan_id} = data;
+      setPlans(prevPlans => {
+        return prevPlans.filter(item => item.plan_id !== plan_id);
+      });
+    });
+
+    newSocket?.on('newEquipment', (data: any) => {
+      console.log('New equipmenet added:', data);
+      setEquipments(prevEquipments => [data, ...prevEquipments]);
+    });
+    newSocket?.on('updateEquipment', (data: any) => {
+      console.log('Im here');
+      const {oldName, name, price, description, status} = data;
+      const newEq = {name, price, description, status};
+      setEquipments(prevEquipments => {
+        const filtered = prevEquipments.filter(item => item.name != oldName);
+        return [newEq, ...filtered];
+      });
+    });
+    newSocket?.on('deleteEquipment', (data: any) => {
+      const {deletedName} = data;
+      setEquipments(prevEquipments => {
+        return prevEquipments.filter(item => item.name !== deletedName);
+      });
+    });
+
+    newSocket?.on('newPrice', data => {
+      setRefresh(prev => !prev);
     });
   };
 

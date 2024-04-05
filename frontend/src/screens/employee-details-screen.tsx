@@ -27,6 +27,8 @@ import CarouselIndicators from '../components/ui/carousel-indicators';
 import AssignmentItem from '../components/ui/assignment-item';
 import client from '../API/client';
 import {useUser} from '../storage/use-user';
+import { io } from 'socket.io-client';
+import { ioString } from '../API/io';
 
 type EmployeeDetailsScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -47,19 +49,6 @@ export type Assignment = {
   date: Date;
 };
 
-export const DUMMY_ASSIGNMENTS: Assignment[] = [
-  {id: 1, date: new Date(), status: 'Done', title: 'Testing One'},
-  {id: 2, date: new Date(), status: 'Done', title: 'Testing One'},
-  {id: 3, date: new Date(), status: 'Done', title: 'Testing One'},
-  {id: 4, date: new Date(), status: 'Done', title: 'Testing One'},
-];
-
-export const DUMMY_ASSIGNMENTS_2: Assignment[] = [
-  {id: 5, date: new Date(), status: 'Not Done', title: 'Testing One'},
-  {id: 6, date: new Date(), status: 'Done', title: 'Testing One'},
-  {id: 7, date: new Date(), status: 'Not Done', title: 'Testing One'},
-  {id: 8, date: new Date(), status: 'Done', title: 'Testing One'},
-];
 
 export const chunkArray = (arr: any[], chunkSize: number) => {
   const chunks = [];
@@ -91,7 +80,7 @@ const EmployeeDetailsScreen = ({
   });
 
   const [expenses, setExpenses] = useState<any>([]);
-  const {accessToken, type, socket} = useUser(state => state);
+  const {accessToken, type, socket, setSocket} = useUser(state => state);
 
   const fetchExpenses = async () => {
     try {
@@ -139,11 +128,36 @@ const EmployeeDetailsScreen = ({
     }
   }
 
+  const [refresh, setRefresh] = useState<boolean>(false)
+
+  useEffect(()=>{
+    establishWebSocketConnection()
+  })
 
   useEffect(() => {
     fetchAssignedAlerts()
     fetchExpenses();
-  }, []);
+  }, [refresh]);
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('Creating new socket');
+    }
+
+    if (socket) {
+      socket.on('newExpense', (data: any) => {
+        setRefresh(prev => !prev);
+      });
+      socket.on('updateExpense', (data: any) => {
+        setRefresh(prev => !prev);
+      });
+      socket.on('deleteExpense', (data: any) => {
+        setRefresh(prev => !prev);
+      });
+    }
+  };
 
   return (
     <View style={[styles.screen, {paddingTop: insets.top}]}>

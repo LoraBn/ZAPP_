@@ -925,7 +925,6 @@ const updatePlan = async (req, res) => {
     const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
-      console.log("im here");
       let room = `emp${ownerId}`;
       req.app.get("io").to(room).emit("updatePlan", {
         plan_id: planId,
@@ -1036,7 +1035,7 @@ const updateElectricSchedule = async (req, res) => {
         text: `
           INSERT INTO electric_schedules (owner_id, schedule)
           VALUES ($1, $2)
-          RETURNING schedule_id`,
+          RETURNING *`,
         values: [ownerId, schedule],
       };
 
@@ -1048,7 +1047,7 @@ const updateElectricSchedule = async (req, res) => {
           UPDATE electric_schedules
           SET schedule = $1
           WHERE owner_id = $2
-          RETURNING schedule_id`,
+          RETURNING *`,
         values: [schedule, ownerId],
       };
 
@@ -1056,20 +1055,22 @@ const updateElectricSchedule = async (req, res) => {
     }
 
     if (updateResult.rowCount > 0) {
+      const room = `all${ownerId}`;
+      console.log(updateResult.rows[0])
+      req.app.get('io').to(room).emit('ScheduleUpdate', { schedule: updateResult.rows[0] });
       res.status(200).json({
         schedule_id: updateResult.rows[0].schedule_id,
         message: "Electric schedule updated successfully!",
       });
     } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to update electric schedule" });
+      res.status(500).json({ error_message: "Failed to update electric schedule" });
     }
   } catch (error) {
     console.error("Error updating electric schedule:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const deleteElectricSchedule = async (req, res) => {
   try {

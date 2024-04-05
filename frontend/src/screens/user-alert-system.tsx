@@ -5,7 +5,6 @@ import ScreenHeader from '../components/ui/screen-header';
 import Card from '../components/ui/card';
 import ListSeperator from '../components/ui/list-seperator';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {DUMMY_USERS, User} from './users-dashboard';
 import UserAlertItem from '../components/ui/user-alert-item';
 import SectionListHeader from '../components/ui/section-list-header';
 import CreateAlert from '../components/ui/create-alert';
@@ -14,19 +13,6 @@ import client from '../API/client';
 import {ioString} from '../API/io';
 import {io} from 'socket.io-client';
 import CreateTicket from '../components/ui/create-ticket';
-
-export type Alert = {
-  id: number;
-  user: User;
-  owner: string;
-  user_description: string;
-  owner_description: string;
-  owner_reply: string;
-  urgent: boolean;
-  title: string;
-  date: Date;
-  open: boolean;
-};
 
 export type ALERT = {
   alert_id: number;
@@ -49,7 +35,8 @@ export type Ticket = {
   is_closed: boolean;
   created_at: Date;
   is_urgent: boolean;
-  created_by_owner: boolean;
+  created_by: string;
+  replies: {sender_username: string; reply_text: string}[];
 };
 
 function formatAlertsForSectionList(alerts: ALERT[]) {
@@ -82,7 +69,6 @@ const UserAlertSystem = () => {
   const [usersType, setUsersType] = useState<'customers' | 'employees'>(
     'customers',
   );
-  const [filter, setFilter] = useState<'urgent' | 'not_urgent' | null>(null);
 
   const {accessToken, socket, setSocket} = useUser(state => state);
 
