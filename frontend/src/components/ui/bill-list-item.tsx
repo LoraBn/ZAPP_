@@ -35,7 +35,7 @@ const BillListItem = ({item}: BillListItemProps) => {
             Total Amount: {item.total_amount}
           </Text>
           <Text style={[styles.text, styles.fontsize16]}>
-            Amount Remaining: {item.remaining_amount || 0}
+           {item.billing_status === "PAID"?'Amount Remained: ' : "Amount Remaining:" }{item.remaining_amount || 0}
           </Text>
         </View>
       )}

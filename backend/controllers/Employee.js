@@ -759,6 +759,7 @@ const getAllOpenAlertTickets = async (req, res) => {
         LEFT JOIN owners o ON ar.owner_id = o.owner_id
         LEFT JOIN employees e ON ar.employee_id = e.employee_id
         WHERE ar.alert_id = $1
+        ORDER BY ar.created_at DESC
       `;
       const repliesResult = await pool.query(repliesQuery, [alert.alert_id]);
       const replies = repliesResult.rows;

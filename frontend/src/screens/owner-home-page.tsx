@@ -185,8 +185,8 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   const [refresh, setRefresh] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchProfit()
-    fetchPrice()
+    fetchProfit();
+    fetchPrice();
   }, [refresh]);
 
   const fetchPlans = async () => {
@@ -229,7 +229,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       });
 
       if (response) {
-        setTickets(response.data.support_ticket_list)
+        setTickets(response.data.support_ticket_list);
       }
     } catch (error) {
       console.log(error);
@@ -280,10 +280,12 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     }
   };
 
-
   const establishWebSocketConnection = () => {
-    const newSocket = io(ioString);
-    setSocket(newSocket);
+    let newSocket = socket;
+    if (!socket) {
+      newSocket = io(ioString);
+      setSocket(newSocket);
+    }
 
     newSocket.on('newAnnouncement', (data: any) => {
       console.log('New announcement received:', data);
@@ -310,7 +312,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     });
 
     //Issues
-    newSocket?.on('newIssue', data => {
+    newSocket.on('newIssue', data => {
       setIssues(prev => [data, ...prev]);
     });
 
@@ -336,7 +338,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
         {paddingTop: insets.top + 15},
       ]}
       style={styles.screen}>
-      <OwnerHeader kwhPrice={kwhPrice} profit= {profit}/>
+      <OwnerHeader kwhPrice={kwhPrice} profit={profit} />
       <Card
         onLayout={({
           nativeEvent: {
@@ -386,8 +388,9 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={issues.length? issues.slice(0, 3):
-                [{created_by: "NO ALERTS"}]}
+              data={
+                issues.length ? issues.slice(0, 3) : [{created_by: 'NO ALERTS'}]
+              }
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>
@@ -408,9 +411,11 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={tickets.length ? 
-              tickets.slice(0,3) :
-            [{created_by: "NO TICKETS"}]}
+              data={
+                tickets.length
+                  ? tickets.slice(0, 3)
+                  : [{created_by: 'NO TICKETS'}]
+              }
               scrollEnabled={false}
               renderItem={AlertItem}
               ListFooterComponent={() =>

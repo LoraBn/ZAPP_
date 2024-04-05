@@ -11,6 +11,8 @@ import {useUser} from '../storage/use-user';
 import dayjs from 'dayjs';
 import client from '../API/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {io} from 'socket.io-client';
+import {ioString} from '../API/io';
 
 type SigninForm = {
   username: string;
@@ -20,9 +22,13 @@ type SigninForm = {
 type SigninProps = StackScreenProps<AuthStackParams, 'Signin'>;
 
 const Signin = ({navigation}: SigninProps) => {
-  const {setAccessToken, setExpiresAtToken, setRefreshToken, setType} = useUser(
-    state => state,
-  );
+  const {
+    setAccessToken,
+    setExpiresAtToken,
+    setRefreshToken,
+    setType,
+    setSocket,
+  } = useUser(state => state);
 
   const {control, handleSubmit} = useForm<SigninForm>({
     defaultValues: {password: '', username: ''},
@@ -41,7 +47,7 @@ const Signin = ({navigation}: SigninProps) => {
             },
           });
           if (response.data.success) {
-            console.log(userType)
+            console.log(userType);
             setType(userType);
             setAccessToken(token);
           }
@@ -52,6 +58,11 @@ const Signin = ({navigation}: SigninProps) => {
     };
     fetchData();
   }, []);
+
+  const establishWebSocketConnection = () => {
+    const newSocket = io(ioString);
+    setSocket(newSocket);
+  };
 
   async function onSubmit({password, username}: SigninForm) {
     // HERE API CALLS
@@ -64,6 +75,7 @@ const Signin = ({navigation}: SigninProps) => {
 
       // SUCCESS HERE OR WITH REACT QUERY OR RTK OR LI BADDIK
       if (await responce.data.userId) {
+        establishWebSocketConnection();
         await AsyncStorage.setItem('token', responce.data.token);
         await AsyncStorage.setItem('userType', responce.data.userType);
         const userType = responce.data.userType;

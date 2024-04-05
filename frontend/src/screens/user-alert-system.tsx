@@ -97,9 +97,30 @@ const UserAlertSystem = () => {
     establishWebSocketConnection();
   }, []);
 
-  const [sections, setSections] = useState<ALERT[] | undefined>(undefined);
+  const [sections, setSections] = useState<ALERT[]>();
 
-  const [sections2, setSections2] = useState<ALERT[] | undefined>(undefined);
+  const [sections2, setSections2] = useState<ALERT[]>();
+
+  const fetchIssues = async () => {
+    if (userType !== 'customer') {
+      try {
+        const response = await client.get(`/${userType}/issues`, {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response && response.data && response.data.alert_ticket_list) {
+          const alertTicketList: ALERT[] = response.data.alert_ticket_list;
+          const formattedSections = formatAlertsForSectionList(alertTicketList);
+          setSections(formattedSections);
+          console.log('success', sections);
+        }
+      } catch (error: any) {
+        console.log(error.message);
+      }
+    }
+  };
 
   const fetchTickets = async () => {
     if (userType !== 'employee') {
@@ -110,7 +131,7 @@ const UserAlertSystem = () => {
           },
         });
 
-        if (response) {
+        if (response && response.data && response.data.support_ticket_list) {
           const alertTicketList: ALERT[] = response.data.support_ticket_list;
           const formattedSections = formatAlertsForSectionList(alertTicketList);
           setSections2(formattedSections);
@@ -118,30 +139,6 @@ const UserAlertSystem = () => {
         }
       } catch (error) {
         console.log(error);
-      }
-    }
-  };
-
-  // Change the fetchIssues function to update the sections state:
-  const fetchIssues = async () => {
-    if (userType !== 'customer') {
-      try {
-        const response = await client.get(`/${userType}/issues`, {
-          headers: {
-            authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response) {
-          const alertTicketList: ALERT[] = response.data.alert_ticket_list;
-          const formattedSections = formatAlertsForSectionList(
-            response.data.alert_ticket_list,
-          );
-          setSections(formattedSections);
-          console.log('success', sections);
-        }
-      } catch (error: any) {
-        console.log(error.message);
       }
     }
   };
@@ -304,7 +301,7 @@ const UserAlertSystem = () => {
               <Text style={styles.text}>{'Create Alert'}</Text>
             </Pressable>
 
-            {sections && (
+            {sections && sections2 && (
               <SectionList
                 sections={usersType === 'employees' ? sections : sections2}
                 ListHeaderComponent={() =>

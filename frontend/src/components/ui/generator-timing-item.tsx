@@ -2,7 +2,6 @@ import {Image, Pressable, StyleSheet, Text, View} from 'react-native';
 import React, {useState} from 'react';
 import Card from './card';
 import WhiteCard from './white-card';
-import {formatDateToHoursAndMinutes} from '../../utils/date-utils';
 import DatePicker from 'react-native-date-picker';
 import {Colors} from '../../utils/colors';
 import {ControllerRenderProps} from 'react-hook-form';
@@ -48,7 +47,7 @@ const GeneratorTimingItem = ({
             onPress={() => setTimingOnOpen(true)}>
             <WhiteCard pointerEvents="none">
               <Text style={styles.onOffText}>
-                {formatDateToHoursAndMinutes(new Date(item.time_to_turn_on))}
+                {new Date(item.time_to_turn_on).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </WhiteCard>
           </Card>
@@ -62,7 +61,7 @@ const GeneratorTimingItem = ({
             onPress={() => setTimingOffOpen(true)}>
             <WhiteCard pointerEvents="none">
               <Text style={styles.onOffText}>
-                {formatDateToHoursAndMinutes(new Date(item.time_to_turn_off))}
+                {new Date(item.time_to_turn_off).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </WhiteCard>
           </Card>

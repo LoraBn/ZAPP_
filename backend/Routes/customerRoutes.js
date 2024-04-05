@@ -16,29 +16,7 @@ const {
 } = require("../controllers/customer");
 const router = Router();
 
-module.exports = function (io) {
-  router.use(authenticateCustomerToken, (req, res, next) => {
-    // Join the room when the request is authenticated
-    io.on("connection", (socket) => {
-      const room1 = `all${req.user.ownerId}`;
-      socket.join(room1);
-      const room2 = `cust${req.user.ownerId}`;
-      socket.join(room2);
-      console.log("joined room", room1, room2);
 
-      // Handle socket disconnection
-      socket.on("disconnect", () => {
-        console.log("Socket disconnected");
-        socket.leave(room1); // Leave the room when disconnected
-        socket.leave(room2); // Leave the room when disconnected
-      });
-    });
-    next(); // Call the next middleware in the chain
-  });
-
-  router.get("/", authenticateCustomerToken, (req, res) => {
-    res.send("Hello", req.user.userType, req.user.username);
-  });
 
   //update Profile
   router.put("/profile", authenticateCustomerToken, updateProfileCustomer);
@@ -80,5 +58,4 @@ module.exports = function (io) {
   );
   router.post("/ticket/:id/reply", authenticateCustomerToken, createReplyCus);
 
-  return router;
-};
+  module.exports  = router;

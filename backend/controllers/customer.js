@@ -158,9 +158,10 @@ const getAllOpenTicketsCus = async (req, res) => {
         LEFT JOIN owners o ON sr.owner_id = o.owner_id
         LEFT JOIN customers c ON sr.customer_id = c.customer_id
         WHERE sr.ticket_id = $1
+        ORDER BY sr.created_at DESC
       `;
       const repliesResult = await pool.query(repliesQuery, [ticket.ticket_id]);
-      const replies = repliesResult.rows.reverse();
+      const replies = repliesResult.rows;
 
       const supportTicket = {
         ticket_id: ticket.ticket_id,

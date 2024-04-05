@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const pool = require('../db')
+const pool = require('../db');
+const { joinRooms } = require('../utils/socket');
 
 const authenticateUser = async (req, res, next) => {
     try {
+      const io = req.app.get('io')
       const authHeader = req.headers["authorization"];
       const userType = req.headers["type"]; // Fixed typo
   
@@ -22,10 +24,11 @@ const authenticateUser = async (req, res, next) => {
   
           if (isOwner.rows.length) {
             req.user = ownerUser;
-            console.log('authenticated')
-            return next(); // Added return statement
+            const rooms= [`all${ownerUser.userId}`,`emp${ownerUser.userId}`,`cust${ownerUser.userId}`];
+            joinRooms(rooms, io)
+            return next();
           }
-          break; // Added break statement
+          break;
         case "customer":
           let customerUser = await jwt.verify(token, process.env.CUSTOMER_ACCESS_TOKEN); // Fixed variable name
           const isCustomer = await pool.query(
@@ -34,6 +37,8 @@ const authenticateUser = async (req, res, next) => {
           );
           if (isCustomer.rows.length) {
             req.user = customerUser;
+            const rooms= [`all${customerUser.ownerId}`,`cust${customerUser.ownerId}`];
+            joinRooms(rooms, io)
             return next(); // Added return statement
           }
           break; // Added break statement
@@ -46,6 +51,8 @@ const authenticateUser = async (req, res, next) => {
   
           if (isEmployee.rows.length) {
             req.user = employeeUser;
+            const rooms= [`all${employeeUser.ownerId}`,`emp${employeeUser.ownerId}`];
+            joinRooms(rooms, io)
             return next(); // Added return statement
           }
           break; // Added break statement

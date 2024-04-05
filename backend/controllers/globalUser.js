@@ -5,6 +5,7 @@ const {
   generateEmployeeToken,
 } = require("../utils/JWT");
 const bcrypt = require("bcrypt");
+const { joinRooms } = require("../utils/socket");
 
 const updateLoggingStatus = async (tableName, userName, value) => {
   try {
@@ -19,6 +20,8 @@ const updateLoggingStatus = async (tableName, userName, value) => {
 
 const userSignIn = async (req, res) => {
   const { userName, password } = req.body;
+
+  const io = req.app.get("io");
 
   try {
     // Check if the username exists in any of the tables
@@ -56,6 +59,10 @@ const userSignIn = async (req, res) => {
     if (userRecord.user_type === "owner") {
       userType = "owner";
       token = await generateOwnerToken(userRecord.user_id, userName);
+      const rooms= [`all${userRecord.owner_id}`,`emp${userRecord.owner_id}`,`cust${userRecord.owner_id}`];
+
+      joinRooms(rooms, io)
+      
     } else if (userRecord.user_type === "customer") {
       userType = "customer";
       token = await generateCustomerToken(
@@ -63,6 +70,10 @@ const userSignIn = async (req, res) => {
         userRecord.owner_id,
         userName
       );
+
+      const rooms= [`all${userRecord.owner_id}`,`cust${userRecord.owner_id}`];
+
+      joinRooms(rooms, io)
     } else if (userRecord.user_type === "employee") {
       userType = "employee";
       token = await generateEmployeeToken(
@@ -70,6 +81,9 @@ const userSignIn = async (req, res) => {
         userRecord.owner_id,
         userName
       );
+      const rooms= [`all${userRecord.owner_id}`,`emp${userRecord.owner_id}`];
+
+      joinRooms(rooms, io)
     }
 
     // Update logging status

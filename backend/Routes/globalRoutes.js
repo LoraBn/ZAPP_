@@ -8,8 +8,5 @@ router.post("/signin", userSignIn);
 router.get("/auth", authenticateUser, (req, res) => {
     res.status(200).json({ success: true });
   });
-router.get("/", (req, res) => {
-  res.send("Hello user");
-});
 
 module.exports = router;

@@ -21,7 +21,7 @@ const TimeRemaining = ({schedule}) => {
 
   const calculateRemainingTime = () => {
     const currentTime = new Date();
-    const currentTimeHours = currentTime.getHours() +16;
+    const currentTimeHours = currentTime.getHours();
     const currentTimeMinutes = currentTime.getMinutes();
     const currentTimeSeconds = currentTime.getSeconds();
 
@@ -34,7 +34,8 @@ const TimeRemaining = ({schedule}) => {
         const startTimeMinutes = startTime.getMinutes();
         const startTimeSeconds = startTime.getSeconds();
 
-        const endTimeHours = endTime.getHours();
+
+        const endTimeHours = endTime.getHours() < startTimeHours ? 24 + endTime.getHours() : endTime.getHours();
         const endTimeMinutes = endTime.getMinutes();
         const endTimeSeconds = endTime.getSeconds();
 
@@ -51,24 +52,17 @@ const TimeRemaining = ({schedule}) => {
           const remaining = elapsedEnd - elapsedCur;
           return formatElapsedTime(remaining);
         }
-
-        
       }
     }
-    
-    const {closestSchedule} = findTheClosestSchedule(schedule)
 
-    console.log(closestSchedule)
-    // If no schedule found for today, return default values
-    return '00:00:00';
+    return findTheClosestSchedule(schedule);
   };
 
   const padZero = (num: number) => {
     return num < 10 ? `0${num}` : `${num}`;
   };
 
-  const findTheClosestSchedule = (scheduleData) => {
-
+  const findTheClosestSchedule = scheduleData => {
     let closestTime = Infinity;
 
     let closestSchedule = [];
@@ -79,49 +73,49 @@ const TimeRemaining = ({schedule}) => {
     const currentTimeSeconds = currentTime.getSeconds();
 
     const elapsedCur =
-        currentTimeHours * 3600 +
-        currentTimeMinutes * 60 +
-        currentTimeSeconds;
+      currentTimeHours * 3600 + currentTimeMinutes * 60 + currentTimeSeconds;
 
     for (const scheduleItem of scheduleData) {
-        for (const item of scheduleItem.schedule) {
-            const startTime = new Date(item.time_to_turn_on);
-            const endTime = new Date(item.time_to_turn_off);
+      for (const item of scheduleItem.schedule) {
+        const startTime = new Date(item.time_to_turn_on);
 
-            const startTimeHours = startTime.getHours();
-            const startTimeMinutes = startTime.getMinutes();
-            const startTimeSeconds = startTime.getSeconds();
+        const startTimeHours =
+          startTime.getHours() === 0 ? 24 : startTime.getHours();
+        const startTimeMinutes = startTime.getMinutes();
+        const startTimeSeconds = startTime.getSeconds();
 
-            const endTimeHours = endTime.getHours();
-            const endTimeMinutes = endTime.getMinutes();
-            const endTimeSeconds = endTime.getSeconds();
+        const elapsedStart =
+          startTimeHours * 3600 + startTimeMinutes * 60 + startTimeSeconds;
 
-            const elapsedStart =
-                startTimeHours * 3600 + startTimeMinutes * 60 + startTimeSeconds;
-            const elapsedEnd =
-                endTimeHours * 3600 + endTimeMinutes * 60 + endTimeSeconds;
-
-            if (elapsedCur <= elapsedStart) {
-                const remaining = elapsedStart - elapsedCur;
-                if (remaining < closestTime) {
-                    closestTime = remaining;
-                    closestSchedule = [item];
-                }
-            }
-
-            else{
-              const remaining = 24 * 3600 + elapsedCur - elapsedStart
-                if (remaining < closestTime) {
-                    closestTime = remaining;
-                    closestSchedule = [item];
-                }
-                console.log(remaining)
-            }
+        if (elapsedCur <= elapsedStart) {
+          const remaining = elapsedStart - elapsedCur;
+          if (remaining < closestTime) {
+            closestTime = remaining;
+            closestSchedule = [item];
+          }
         }
+      }
     }
-    return { closestSchedule};
-};
+    for (const item of closestSchedule) {
+      const startTime = new Date(item.time_to_turn_on);
 
+      const startTimeHours =
+        startTime.getHours() === 0 ? 24 : startTime.getHours();
+      const startTimeMinutes = startTime.getMinutes();
+      const startTimeSeconds = startTime.getSeconds();
+
+      const elapsedStart =
+        startTimeHours * 3600 + startTimeMinutes * 60 + startTimeSeconds;
+
+      if (elapsedStart >= elapsedCur) {
+        const remaining = elapsedStart - elapsedCur;
+        return formatElapsedTime(remaining);
+      } else {
+        const remaining = 24 * 3600 - elapsedCur + elapsedStart;
+        return formatElapsedTime(remaining);
+      }
+    }
+  };
 
   function formatElapsedTime(elapsedTime) {
     let hours = Math.floor(elapsedTime / 3600);

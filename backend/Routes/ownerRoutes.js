@@ -70,163 +70,132 @@ const {
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
 
-module.exports = function (io) {
-  
-  router.post("/signup", ownerSignUp);
+router.post("/signup", ownerSignUp);
 
-  router.use(authenticateOwnerToken, (req, res, next) => {
-    // Join the room when the request is authenticated
-    io.on("connection", (socket) => {
-      const room1 = `all${req.user.userId}`;
-      socket.join(room1);
-      const room2 = `emp${req.user.userId}`;
-      socket.join(room2);
-      const room3 = `cust${req.user.userId}`;
-      socket.join(room3);
-      console.log("joined room", room1, room2, room3);
+router.put("/profile", authenticateOwnerToken, ownerUpdate);
 
-      // Handle socket disconnection
-      socket.on("disconnect", () => {
-        console.log("Socket disconnected");
-        socket.leave(room1); // Leave the room when disconnected
-        socket.leave(room2); // Leave the room when disconnected
-        socket.leave(room3); // Leave the room when disconnected
-      });
-    });
-    next(); // Call the next middleware in the chain
-  });
+//customers
+router.get("/customers", authenticateOwnerToken, getCustomersList);
+router.post("/customers", authenticateOwnerToken, createCustomerAccount);
+router.put(
+  "/customers/:username",
+  authenticateOwnerToken,
+  updateCustomerAccount
+);
+router.delete("/customers/:id", authenticateOwnerToken, deleteCustomer);
 
-  router.put("/profile", authenticateOwnerToken, ownerUpdate);
+//employees
+router.get("/employees", authenticateOwnerToken, getEmployeeList);
+router.post("/employees", authenticateOwnerToken, createEmployeeAccount);
+router.put(
+  "/employees/:username",
+  authenticateOwnerToken,
+  updateEmployeeAccount
+);
+router.delete("/employees/:username", authenticateOwnerToken, deleteEmployee);
 
-  //customers
-  router.get("/customers", authenticateOwnerToken, getCustomersList);
-  router.post("/customers", authenticateOwnerToken, createCustomerAccount);
-  router.put(
-    "/customers/:username",
-    authenticateOwnerToken,
-    updateCustomerAccount
-  );
-  router.delete("/customers/:id", authenticateOwnerToken, deleteCustomer);
+//equipments
+router.get("/equipments", authenticateOwnerToken, getEquipments);
+router.post("/equipments", authenticateOwnerToken, createEquipment);
+router.put("/equipment/:name", authenticateOwnerToken, updateEquipment);
+router.delete("/equipment/:name", authenticateOwnerToken, deleteEquipment);
 
-  //employees
-  router.get("/employees", authenticateOwnerToken, getEmployeeList);
-  router.post("/employees", authenticateOwnerToken, createEmployeeAccount);
-  router.put(
-    "/employees/:username",
-    authenticateOwnerToken,
-    updateEmployeeAccount
-  );
-  router.delete("/employees/:username", authenticateOwnerToken, deleteEmployee);
+//announcements
+router.get("/announcements", authenticateOwnerToken, getAnnouncements);
+router.post("/announcements", authenticateOwnerToken, createAnnouncement);
+router.delete("/announcements/:id", authenticateOwnerToken, deleteAnnouncement);
 
-  //equipments
-  router.get("/equipments", authenticateOwnerToken, getEquipments);
-  router.post("/equipments", authenticateOwnerToken, createEquipment);
-  router.put("/equipment/:name", authenticateOwnerToken, updateEquipment);
-  router.delete("/equipment/:name", authenticateOwnerToken, deleteEquipment);
+//Kwh_prices
+router.get("/price", authenticateOwnerToken, getKwhPrice);
+router.put("/price/", authenticateOwnerToken, updatePrice);
+router.delete("/price/:id", authenticateOwnerToken, deletePrice);
 
-  //announcements
-  router.get("/announcements", authenticateOwnerToken, getAnnouncements);
-  router.post("/announcements", authenticateOwnerToken, createAnnouncement);
-  router.delete(
-    "/announcements/:id",
-    authenticateOwnerToken,
-    deleteAnnouncement
-  );
+//subscription plan
+router.get("/plans", authenticateOwnerToken, getPlans);
+router.post("/plans", authenticateOwnerToken, createPlan);
+router.put("/plans/:id", authenticateOwnerToken, updatePlan);
+router.delete("/plans/:id", authenticateOwnerToken, deletePlan);
 
-  //Kwh_prices
-  router.get("/price", authenticateOwnerToken, getKwhPrice);
-  router.put("/price/", authenticateOwnerToken, updatePrice);
-  router.delete("/price/:id", authenticateOwnerToken, deletePrice);
+//electric schedule
+router.get("/electric-schedule", authenticateOwnerToken, getElectricSchedule);
+router.post(
+  "/electric-schedule",
+  authenticateOwnerToken,
+  createElectricSchedule
+);
+router.put(
+  "/electric-schedule/",
+  authenticateOwnerToken,
+  updateElectricSchedule
+);
+router.delete(
+  "/electric-schedule/:id",
+  authenticateOwnerToken,
+  deleteElectricSchedule
+);
 
-  //subscription plan
-  router.get("/plans", authenticateOwnerToken, getPlans);
-  router.post("/plans", authenticateOwnerToken, createPlan);
-  router.put("/plans/:id", authenticateOwnerToken, updatePlan);
-  router.delete("/plans/:id", authenticateOwnerToken, deletePlan);
+//Bills
+router.get("/bills", authenticateOwnerToken, getAllBills);
+router.get("/bills/:id", authenticateOwnerToken, getCustomerBill);
+//the Id is for the customer here
+router.post("/bills/:id", authenticateOwnerToken, createBill);
+//the id is for the bill here
+router.put("/bills/:id", authenticateOwnerToken, updateBill);
+router.delete("/bills/:id", authenticateOwnerToken, deleteBill);
 
-  //electric schedule
-  router.get("/electric-schedule", authenticateOwnerToken, getElectricSchedule);
-  router.post(
-    "/electric-schedule",
-    authenticateOwnerToken,
-    createElectricSchedule
-  );
-  router.put(
-    "/electric-schedule/",
-    authenticateOwnerToken,
-    updateElectricSchedule
-  );
-  router.delete(
-    "/electric-schedule/:id",
-    authenticateOwnerToken,
-    deleteElectricSchedule
-  );
+//calculate Bill
+router.post("/calculate-bill/:id", authenticateOwnerToken, calculateBill);
 
-  //Bills
-  router.get("/bills", authenticateOwnerToken, getAllBills);
-  router.get("/bills/:id", authenticateOwnerToken, getCustomerBill);
-  //the Id is for the customer here
-  router.post("/bills/:id", authenticateOwnerToken, createBill);
-  //the id is for the bill here
-  router.put("/bills/:id", authenticateOwnerToken, updateBill);
-  router.delete("/bills/:id", authenticateOwnerToken, deleteBill);
+//Billing cycle
+router.get("/billing-cycle", authenticateOwnerToken, checkActiveBillingCycle);
+router.post("/billing-cycle/start", authenticateOwnerToken, startBilling);
+router.post("/billing-cycle/stop", authenticateOwnerToken, stopBilling);
 
-  //Billing cycle
-  router.get("/billing-cycle", authenticateOwnerToken, checkActiveBillingCycle);
-  router.post("/billing-cycle/start", authenticateOwnerToken, startBilling);
-  router.post("/billing-cycle/stop", authenticateOwnerToken, stopBilling);
+//Previous Meter;
+router.get("/previous-meter/:id", authenticateOwnerToken, getPreviousMeter);
 
-  //Previous Meter;
-  router.get("/previous-meter/:id", authenticateOwnerToken, getPreviousMeter);
+router.get("/profit", authenticateOwnerToken, calculateProfit);
 
-  router.get("/profit", authenticateOwnerToken, calculateProfit);
+//expenses
+router.get("/expenses", authenticateOwnerToken, getExpenses);
 
-  //calculate Bill
-  router.post("/calculate-bill/:id", authenticateOwnerToken, calculateBill);
+//id is employeeId
+router.get("/expenses/:id", authenticateOwnerToken, getExpensesOfEmp);
+router.post("/expenses", authenticateOwnerToken, createExpense);
+router.put("/expenses/:id", authenticateOwnerToken, updateExpense);
+router.delete("/expenses/:id", authenticateOwnerToken, deleteExpense);
 
-  //expenses
-  router.get("/expenses", authenticateOwnerToken, getExpenses);
+//Support_tickets
+router.get("/tickets", authenticateOwnerToken, getAllSupportTickets);
+router.get("/ticket/open", authenticateOwnerToken, getAllOpenTickets);
+router.get("/ticket/close", authenticateOwnerToken, getAllClosedTickets);
+router.get("/ticket/:id", authenticateOwnerToken, getSupportTicket);
+router.post("/ticket", authenticateOwnerToken, createSupportTicket);
+router.put("/ticket/:id", authenticateOwnerToken, updateSupportTicket);
+router.put("/ticket/:id/close", authenticateOwnerToken, closeSupportTicket);
+router.delete("/ticket/:id", authenticateOwnerToken, deleteSupportTicket);
 
-  //id is employeeId
-  router.get("/expenses/:id", authenticateOwnerToken, getExpensesOfEmp);
-  router.post("/expenses", authenticateOwnerToken, createExpense);
-  router.put("/expenses/:id", authenticateOwnerToken, updateExpense);
-  router.delete("/expenses/:id", authenticateOwnerToken, deleteExpense);
+//Support tickets replies
+router.get("/ticket/:id/reply", authenticateOwnerToken, getAllTicketReplies);
+router.post("/ticket/:id/reply", authenticateOwnerToken, createReply);
 
-  //Support_tickets
-  router.get("/tickets", authenticateOwnerToken, getAllSupportTickets);
-  router.get("/ticket/open", authenticateOwnerToken, getAllOpenTickets);
-  router.get("/ticket/close", authenticateOwnerToken, getAllClosedTickets);
-  router.get("/ticket/:id", authenticateOwnerToken, getSupportTicket);
-  router.post("/ticket", authenticateOwnerToken, createSupportTicket);
-  router.put("/ticket/:id", authenticateOwnerToken, updateSupportTicket);
-  router.put("/ticket/:id/close", authenticateOwnerToken, closeSupportTicket);
-  router.delete("/ticket/:id", authenticateOwnerToken, deleteSupportTicket);
+//alert ticket
+router.get("/issues", authenticateOwnerToken, getAllAlertTickets);
+router.get("/issues/:id", authenticateOwnerToken, getAlertTicket);
+router.get("/issues/open", authenticateOwnerToken, getAllOpenAlerts);
+router.get("/issues/close", authenticateOwnerToken, getAllClosedAlerts);
+router.put("/issues/:id", authenticateOwnerToken, updateAlertTicket);
+router.put("/issues/:id/close", authenticateOwnerToken, closeAlertTicket);
+router.post("/issues", authenticateOwnerToken, createAlertTicket);
+router.delete("/issues/:id", authenticateOwnerToken, deleteAlertTicket);
 
-  //Support tickets replies
-  router.get("/ticket/:id/reply", authenticateOwnerToken, getAllTicketReplies);
-  router.post("/ticket/:id/reply", authenticateOwnerToken, createReply);
+router.get("/assigned-issues/:id", authenticateOwnerToken, getAssignedTickets);
 
-  //alert ticket
-  router.get("/issues", authenticateOwnerToken, getAllAlertTickets);
-  router.get("/issues/:id", authenticateOwnerToken, getAlertTicket);
-  router.get("/issues/open", authenticateOwnerToken, getAllOpenAlerts);
-  router.get("/issues/close", authenticateOwnerToken, getAllClosedAlerts);
-  router.put("/issues/:id", authenticateOwnerToken, updateAlertTicket);
-  router.put("/issues/:id/close", authenticateOwnerToken, closeAlertTicket);
-  router.post("/issues", authenticateOwnerToken, createAlertTicket);
-  router.delete("/issues/:id", authenticateOwnerToken, deleteAlertTicket);
+//alert replies
+router.post("/issue/:id/reply", authenticateOwnerToken, createAlertReply);
+router.get("/issue/:id/reply", authenticateOwnerToken, getAllAlertReplies);
 
-  router.get('/assigned-issues/:id', authenticateOwnerToken, getAssignedTickets)
+//analytics
+router.get("/analytics/bills", authenticateOwnerToken, getBillsAnalytics);
 
-  //alert replies
-  router.post("/issue/:id/reply", authenticateOwnerToken, createAlertReply);
-  router.get("/issue/:id/reply", authenticateOwnerToken, getAllAlertReplies);
-
-  //analytics
-  router.get('/analytics/bills', authenticateOwnerToken, getBillsAnalytics);
-
-
-
-  return router;
-};
+module.exports = router;
