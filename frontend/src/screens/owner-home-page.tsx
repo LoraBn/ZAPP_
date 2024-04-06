@@ -27,27 +27,6 @@ import AnnouncementItem from '../components/alerts/announcement-item';
 import {useUser} from '../storage/use-user';
 import {ioString} from '../API/io';
 
-export const DUMMY_ALERTS = [
-  {
-    id: 1,
-    user: {name: 'User'},
-    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
-    date: new Date(),
-  },
-  {
-    id: 2,
-    user: {name: 'User'},
-    alert: 'Lorem ipsum dolor dolor dolor dolor dolor dolor dolor dolor',
-    date: new Date(),
-  },
-  {
-    id: 3,
-    user: {name: 'User'},
-    alert: 'Lorem ipsum dolor dolor dolor dolor  dolor dolor dolor dolor',
-    date: new Date(),
-  },
-];
-
 export type Equipment = {
   id: number;
   name: string;
@@ -55,51 +34,6 @@ export type Equipment = {
   description: string;
   status: 'Active' | 'Inactive';
 };
-
-export const DUMMY_EQUIPMENT: Equipment[] = [
-  {
-    description: 'Descriptionets',
-    id: 1,
-    name: 'Motor 1',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 2,
-    name: 'Motor 2',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 3,
-    name: 'Motor 3',
-    price: 200,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 4,
-    name: 'Motor 4',
-    price: 200,
-    status: 'Inactive',
-  },
-  {
-    description: 'Descriptionets',
-    id: 5,
-    name: 'Motor 5',
-    price: 300,
-    status: 'Active',
-  },
-  {
-    description: 'Descriptionets',
-    id: 6,
-    name: 'Motor 6',
-    price: 100,
-    status: 'Active',
-  },
-];
 
 type OwnerHomePageProps = StackScreenProps<
   HomeStackNavigatorParams,
