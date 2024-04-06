@@ -8,7 +8,7 @@ const updateProfile = async (req, res) => {
   try {
     const employeeId = req.user.userId; // Updated variable name
     const ownerId = req.user.ownerId;
-    const {username, password } = req.body;
+    const { username, password } = req.body;
 
     // Check if the employee exists
     const employeeExists = await pool.query(
@@ -35,11 +35,7 @@ const updateProfile = async (req, res) => {
         SET username = $1, password_hash = $2
         WHERE employee_id = $3
         RETURNING employee_id, username`,
-      values: [
-        updatedUserName,
-        updatedPassword,
-        employeeId,
-      ],
+      values: [updatedUserName, updatedPassword, employeeId],
     };
 
     const results = await pool.query(updateQuery);
@@ -50,6 +46,8 @@ const updateProfile = async (req, res) => {
         ownerId,
         updatedUserName
       );
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("employeeUpdate", { username });
       return res
         .status(200)
         .json({ message: "Employee updated successfully", token: newToken });
@@ -67,7 +65,7 @@ const updateProfile = async (req, res) => {
 const getCustomerListEmployee = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
-    const queryText = "SELECT * FROM customers WHERE owner_id=$1";
+    const queryText = "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [ownerId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ customers: results.rows });
@@ -137,6 +135,9 @@ const createCustomerAccountEmployee = async (req, res) => {
       equipmentId,
     ]);
 
+    let room = `all${ownerId}`;
+    req.app.get("io").to(room).emit("customersUpdate", { username });
+
     res.status(201).json({ user_info: { username, password } });
   } catch (error) {
     console.error("Error during customer account creation:", error);
@@ -151,7 +152,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
     const {
       name,
       lastName,
-      userName,
+      username,
       password,
       address,
       planName,
@@ -178,7 +179,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
     const updatedValues = {
       name: name || existingCustomer.name,
       last_name: lastName || existingCustomer.last_name,
-      username: userName || existingCustomer.username,
+      username: username || existingCustomer.username,
       password_hash: password
         ? await bcrypt.hash(password, 10)
         : existingCustomer.password_hash,
@@ -186,7 +187,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
       plan_id: planName
         ? (
             await pool.query(
-              "SELECT * FROM plans_prices WHERE plan_name = $1 RETURNING plan_id",
+              "SELECT * FROM plans_prices WHERE plan_name = $1",
               [planName]
             )
           ).rows[0].plan_id
@@ -194,7 +195,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
       equipement_id: equipementName
         ? (
             await pool.query(
-              "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2 RETURNING equipement_id",
+              "SELECT * FROM equipments WHERE owner_id = $1 AND name = $2",
               [ownerId, equipementName]
             )
           ).rows[0].equipement_id
@@ -202,7 +203,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
       schedule_id: scheduleName
         ? (
             await pool.query(
-              "SELECT * FROM electric_schedules WHERE owner_id = $1 AND schedule_name = $2 RETURNING schedule_id",
+              "SELECT * FROM electric_schedules WHERE owner_id = $1 AND schedule_name = $2",
               [ownerId, scheduleName]
             )
           ).rows[0].schedule_id
@@ -232,6 +233,8 @@ const updateCustomerAccountEmployee = async (req, res) => {
     const result = await pool.query(updateQuery);
 
     if (result.rowCount > 0) {
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("customersUpdate", { username });
       res.status(201).json({
         message: "Customer updated succesfully!",
         user_info: { username: updatedValues.username, password: password },
@@ -745,8 +748,12 @@ const getAllOpenAlertTickets = async (req, res) => {
         JOIN employees e ON aa.employee_id = e.employee_id
         WHERE aa.alert_id = $1
       `;
-      const assignedEmployeesResult = await pool.query(assignedEmployeesQuery, [alert.alert_id]);
-      const assignedUsernames = assignedEmployeesResult.rows.map(row => row.username);
+      const assignedEmployeesResult = await pool.query(assignedEmployeesQuery, [
+        alert.alert_id,
+      ]);
+      const assignedUsernames = assignedEmployeesResult.rows.map(
+        (row) => row.username
+      );
 
       // Fetch replies for each alert from both employees and owners
       const repliesQuery = `
@@ -927,26 +934,42 @@ const createAlertReplyEmp = async (req, res) => {
 
 const closeAlertTicketEmp = async (req, res) => {
   try {
+    const ownerId = req.user.ownerId;
     const employeeId = req.user.userId;
     const alertId = req.params.id;
 
-    // Check if alertId and employeeId are defined and valid
-    if (!alertId || !employeeId) {
+    // Check if alertId and ownerId are defined and valid
+    if (!alertId || !ownerId) {
       return res
         .status(400)
-        .json({ error_message: "Invalid alert ID or employee ID" });
+        .json({ error_message: "Invalid alert ID or owner ID" });
     }
 
-    // Check if the employee is assigned to the alert
-    const assignmentCheckQuery = `
-      SELECT 1 FROM assigned_alerts WHERE alert_id = $1 AND employee_id = $2
-    `;
-    const assignmentCheckResult = await pool.query(assignmentCheckQuery, [alertId, employeeId]);
+    // Check if the alert ticket exists and is owned by the provided owner
+    const alertExistsQuery =
+      "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
+    const alertExistsResult = await pool.query(alertExistsQuery, [
+      alertId,
+      ownerId,
+    ]);
 
-    if (assignmentCheckResult.rows.length === 0) {
+    if (alertExistsResult.rows.length === 0) {
       return res
-        .status(406)
-        .json({ error_message: "Employee is not assigned to the alert" });
+        .status(404)
+        .json({ error_message: "No alert ticket found with the provided ID" });
+    }
+
+    // Check if the alert is assigned to the employee
+    const isAssignedQuery = `SELECT * FROM assigned_alerts WHERE alert_id = $1 AND employee_id = $2`;
+    const isAssignedResult = await pool.query(isAssignedQuery, [
+      alertId,
+      employeeId,
+    ]);
+
+    if (!isAssignedResult.rowCount) {
+      return res.status(403).json({
+        error_message: "You have to be assigned to the alert to close it",
+      });
     }
 
     // Proceed with closing the alert ticket
@@ -954,14 +977,14 @@ const closeAlertTicketEmp = async (req, res) => {
       text: `
         UPDATE alerts
         SET is_closed = true
-        WHERE alert_id = $1`,
-      values: [alertId],
+        WHERE alert_id = $1 AND owner_id = $2`,
+      values: [alertId, ownerId],
     };
 
     const closeResult = await pool.query(closeQuery);
 
     if (closeResult.rowCount > 0) {
-      let room = `emp${employeeId}`;
+      let room = `emp${ownerId}`;
       req.app.get("io").to(room).emit("closedIssue", { alert_id: alertId });
       res.status(200).json({
         alert_id: alertId,
@@ -998,8 +1021,6 @@ const getAssignedTicketsEmp = async (req, res) => {
   }
 };
 
-
-
 const assignSelf = async (req, res) => {
   try {
     const employeeId = req.user.userId;
@@ -1010,11 +1031,16 @@ const assignSelf = async (req, res) => {
     const checkAssignmentQuery = `
       SELECT 1 FROM assigned_alerts WHERE alert_id = $1 AND employee_id = $2
     `;
-    const checkResult = await pool.query(checkAssignmentQuery, [alertId, employeeId]);
+    const checkResult = await pool.query(checkAssignmentQuery, [
+      alertId,
+      employeeId,
+    ]);
 
     if (checkResult.rows.length > 0) {
       // Employee is already assigned to the alert, return an error response
-      return res.status(400).json({ error_message: "Employee is already assigned to the alert" });
+      return res
+        .status(400)
+        .json({ error_message: "Employee is already assigned to the alert" });
     }
 
     // If employee is not already assigned, proceed with the assignment
@@ -1023,15 +1049,21 @@ const assignSelf = async (req, res) => {
 
     // Update the alert status to indicate it has been assigned
     const updateAlertQuery = `UPDATE alerts SET is_assigned = true WHERE alert_id = $1 AND owner_id = $2`;
-    await pool.query(updateAlertQuery, [alertId, ownerId]);
+    const result = await pool.query(updateAlertQuery, [alertId, ownerId]);
 
-    res.status(203).json({ assignedTo: req.user.username });
+    if (result.rowCount) {
+      const room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("assignEvent", {
+        assignedTo: req.user.username,
+        alert_id: alertId,
+      });
+      res.status(203).json({ assignedTo: req.user.username });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getAllAlertRepliesEmp = async (req, res) => {
   try {
@@ -1062,23 +1094,25 @@ const getAllAlertRepliesEmp = async (req, res) => {
 const getAnnouncementsEmp = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
-    const queryText =
-      "SELECT * FROM announcements WHERE owner_id = $1 AND (target_type = 'EMPLOYEE' OR target_type = 'BOTH')";
+    const queryText = `
+      SELECT a.*, o.username as owner_username
+      FROM announcements a
+      LEFT JOIN owners o ON a.owner_id = o.owner_id
+      WHERE a.owner_id = $1 AND (a.target_type = 'EMPLOYEE' OR a.target_type = 'BOTH')`;
 
     const announcementsResult = await pool.query(queryText, [ownerId]);
 
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res
-        .status(404)
-        .json({ error_message: "No announcements found for the employee" });
+      res.status(404).json({ error_message: "No announcements found for the employee" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getElectricScheduleEmp = async (req, res) => {
   try {

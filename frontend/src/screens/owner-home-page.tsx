@@ -103,7 +103,6 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
 
   useEffect(() => {
     fetchAnnouncements();
-    fetchEquipments();
     establishWebSocketConnection();
     fetchEmployees();
     fetchIssues();
@@ -120,7 +119,8 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   useEffect(() => {
     fetchProfit();
     fetchPrice();
-    fetchPlans()
+    fetchPlans();
+    fetchEquipments()
   }, [refresh]);
 
   const fetchPlans = async () => {
@@ -174,7 +174,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     try {
       const response = await client.get(`/${type}/announcements`, {
         headers: {
-          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+          authorization: `Bearer ${accessToken}`,
         },
       });
       setAnnouncements(response.data.announcements.reverse());
@@ -226,23 +226,13 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       setAnnouncements(prevAnnouncements => [...prevAnnouncements, data]);
     });
     newSocket.on('newEquipment', (data: any) => {
-      console.log('New equipmenet added:', data);
-      setEquipments(prevEquipments => [data, ...prevEquipments]);
+      setRefresh(prev => !prev);
     });
     newSocket.on('updateEquipment', (data: any) => {
-      console.log('Im here');
-      const {oldName, name, price, description, status} = data;
-      const newEq = {name, price, description, status};
-      setEquipments(prevEquipments => {
-        const filtered = prevEquipments.filter(item => item.name != oldName);
-        return [newEq, ...filtered];
-      });
+      setRefresh(prev => !prev);
     });
     newSocket.on('deleteEquipment', (data: any) => {
-      const {deletedName} = data;
-      setEquipments(prevEquipments => {
-        return prevEquipments.filter(item => item.name !== deletedName);
-      });
+      setRefresh(prev => !prev);
     });
 
     //Issues
@@ -299,7 +289,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
               contentContainerStyle={styles.flatlistContainer}
               data={
                 equipments.length
-                  ? equipments.slice(0, 3)
+                  ? equipments?.slice(0, 3)
                   : [{name: 'NO EQUIPMENT'}]
               }
               scrollEnabled={false}
@@ -370,7 +360,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={announcements.slice(0, 3)}
+              data={announcements.length? announcements.slice(0, 3) : [{owner_username: "No Announcement"}]}
               scrollEnabled={false}
               renderItem={AnnouncementItem}
               ListFooterComponent={() =>

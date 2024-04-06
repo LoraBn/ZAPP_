@@ -55,7 +55,7 @@ const ownerSignUp = async (req, res) => {
 const ownerUpdate = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const {username, password } = req.body;
+    const { username, password } = req.body;
 
     // Check if the owner exists
     const ownerExists = await pool.query(
@@ -82,11 +82,7 @@ const ownerUpdate = async (req, res) => {
         SET username = $1, password_hash = $2
         WHERE owner_id = $3
       `,
-      values: [
-        updatedUserName,
-        updatedPassword,
-        userId,
-      ],
+      values: [updatedUserName, updatedPassword, userId],
     };
 
     const results = await pool.query(updateQuery);
@@ -110,7 +106,7 @@ const ownerUpdate = async (req, res) => {
 const getCustomersList = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const queryText = "SELECT * FROM customers WHERE owner_id=$1";
+    const queryText = "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [ownerId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ customers: results.rows });
@@ -124,7 +120,7 @@ const getCustomersList = async (req, res) => {
 const getEmployeeList = async (req, res) => {
   try {
     const { userId } = req.user;
-    const queryText = "SELECT * FROM employees WHERE owner_id = $1";
+    const queryText = "SELECT * FROM employees WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [userId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ employees: results.rows });
@@ -137,12 +133,12 @@ const getEmployeeList = async (req, res) => {
 
 const createEmployeeAccount = async (req, res) => {
   try {
-    const { name, lastName, userName, salary, password } = req.body;
+    const { name, lastName, username, salary, password } = req.body;
     const ownerId = req.user.userId;
 
     const userExists = await pool.query(
       "SELECT * FROM employees WHERE username = $1",
-      [userName]
+      [username]
     );
 
     if (userExists.rows.length > 0) {
@@ -159,7 +155,7 @@ const createEmployeeAccount = async (req, res) => {
 
     pool.query(
       queryText,
-      [ownerId, name, lastName, userName, hashedPass, salary],
+      [ownerId, name, lastName, username, hashedPass, salary],
       (err, results) => {
         if (err) {
           console.error("Error creating employee account:", err);
@@ -167,8 +163,8 @@ const createEmployeeAccount = async (req, res) => {
         } else {
           let room = `all${ownerId}`;
           const newEmployeeData = results.rows[0]; // Extract newly inserted employee data
-          req.app.get("io").to(room).emit("newEmployee", newEmployeeData); // Emit new employee data
-          res.status(201).json({ user_info: { userName, password } });
+          req.app.get("io").to(room).emit("employeeUpdate", newEmployeeData); // Emit new employee data
+          res.status(201).json({ user_info: { username, password } });
         }
       }
     );
@@ -194,6 +190,9 @@ const deleteEmployee = async (req, res) => {
       const deleteEmployeeQuery =
         "DELETE FROM employees WHERE owner_id = $1 AND username = $2";
       await pool.query(deleteEmployeeQuery, [ownerId, employeeUserName]);
+
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("employeeUpdate", { username });
       res.status(202).json({ message: "Employee deleted successfully" });
     } else {
       res.status(404).json({ error_message: "Employee not found" });
@@ -208,7 +207,7 @@ const updateEmployeeAccount = async (req, res) => {
   try {
     const ownerId = req.user.userId;
     const employeeUsername = req.params.username;
-    const { name, lastName, userName, password, salary } = req.body;
+    const { name, lastName, username, password, salary } = req.body;
 
     // Check if the employee exists
     const employeeExistsQuery =
@@ -230,7 +229,7 @@ const updateEmployeeAccount = async (req, res) => {
     const updatedValues = {
       name: name || existingEmployee.name,
       last_name: lastName || existingEmployee.last_name,
-      username: userName || existingEmployee.username,
+      username: username || existingEmployee.username,
       password_hash: password
         ? await bcrypt.hash(password, 10)
         : existingEmployee.password_hash,
@@ -258,6 +257,8 @@ const updateEmployeeAccount = async (req, res) => {
     const updateResult = await pool.query(updateQuery);
 
     if (updateResult.rowCount > 0) {
+      let room = `emp${ownerId}`;
+      req.app.get("io").to(room).emit("employeeUpdate", { username });
       res.status(200).json({
         message: "Employee updated successfully!",
         user_info: { username: updatedValues.username, password: password },
@@ -332,6 +333,8 @@ const createCustomerAccount = async (req, res) => {
       equipmentId,
     ]);
 
+    let room = `all${ownerId}`;
+    req.app.get("io").to(room).emit("customersUpdate", { username });
     res.status(201).json({ user_info: { username, password } });
   } catch (error) {
     console.error("Error during customer account creation:", error);
@@ -417,6 +420,8 @@ const updateCustomerAccount = async (req, res) => {
     const result = await pool.query(updateQuery);
 
     if (result.rowCount > 0) {
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("customersUpdate", { username });
       res.status(201).json({
         message: "Customer updated successfully!",
         user_info: { username: updatedValues.username, password: password },
@@ -452,7 +457,8 @@ const deleteCustomer = async (req, res) => {
       const deleteCustomerQuery =
         "DELETE FROM customers WHERE owner_id = $1 AND customer_id = $2";
       await pool.query(deleteCustomerQuery, [ownerId, customerId]);
-
+      let room = `all${ownerId}`;
+      req.app.get('io').to(room).emit('customersUpdate',{username})
       res.status(202).json({ message: "User deleted successfully" });
     } else {
       res.status(404).json({ error_message: "User not found" });
@@ -469,14 +475,17 @@ const deleteRelatedRecords = async (customerId) => {
     // Delete records from related tables
     await Promise.all([
       pool.query("DELETE FROM bills WHERE customer_id = $1", [customerId]),
-      pool.query("DELETE FROM support_tickets WHERE customer_id = $1", [customerId]),
-      pool.query("DELETE FROM support_tickets_replies WHERE customer_id = $1", [customerId])
+      pool.query("DELETE FROM support_tickets WHERE customer_id = $1", [
+        customerId,
+      ]),
+      pool.query("DELETE FROM support_tickets_replies WHERE customer_id = $1", [
+        customerId,
+      ]),
     ]);
   } catch (error) {
     console.log(error);
   }
 };
-
 
 const createEquipment = async (req, res) => {
   const { name, price, description, status } = req.body;
@@ -643,22 +652,25 @@ const deleteEquipment = async (req, res) => {
 const getAnnouncements = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const queryText = "SELECT * FROM announcements WHERE owner_id = $1";
+    const queryText = `
+      SELECT a.*, o.username as owner_username
+      FROM announcements a
+      LEFT JOIN owners o ON a.owner_id = o.owner_id
+      WHERE a.owner_id = $1`;
 
     const announcementsResult = await pool.query(queryText, [ownerId]);
 
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res
-        .status(404)
-        .json({ error_message: "No announcements found for the owner" });
+      res.status(404).json({ error_message: "No announcements found for the owner" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const createAnnouncement = async (req, res) => {
   try {
@@ -1056,21 +1068,25 @@ const updateElectricSchedule = async (req, res) => {
 
     if (updateResult.rowCount > 0) {
       const room = `all${ownerId}`;
-      console.log(updateResult.rows[0])
-      req.app.get('io').to(room).emit('ScheduleUpdate', { schedule: updateResult.rows[0] });
+      console.log(updateResult.rows[0]);
+      req.app
+        .get("io")
+        .to(room)
+        .emit("ScheduleUpdate", { schedule: updateResult.rows[0] });
       res.status(200).json({
         schedule_id: updateResult.rows[0].schedule_id,
         message: "Electric schedule updated successfully!",
       });
     } else {
-      res.status(500).json({ error_message: "Failed to update electric schedule" });
+      res
+        .status(500)
+        .json({ error_message: "Failed to update electric schedule" });
     }
   } catch (error) {
     console.error("Error updating electric schedule:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const deleteElectricSchedule = async (req, res) => {
   try {
@@ -1288,17 +1304,20 @@ const createBill = async (req, res) => {
       WHERE customer_id = $1
     `;
     const existingBillsResult = await pool.query(existingBillQuery, [
-      customerId
+      customerId,
     ]);
 
     // Update existing bills to PAID if they were not already paid
     for (const existingBill of existingBillsResult.rows) {
       if (existingBill.remaining_amount > 0) {
-        await pool.query(`
+        await pool.query(
+          `
           UPDATE bills
           SET billing_status = 'PAID'
           WHERE bill_id = $1
-        `, [existingBill.bill_id]);
+        `,
+          [existingBill.bill_id]
+        );
       }
     }
 
@@ -1348,7 +1367,6 @@ const createBill = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getPreviousMeter = async (req, res) => {
   try {
@@ -2453,13 +2471,13 @@ const getAssignedTickets = async (req, res) => {
     `;
 
     const { rows } = await pool.query(query, [employeeId]);
-    
+
     res.status(200).json({ assigned_alerts: rows });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
-}
+};
 
 const getAlertTicket = async (req, res) => {
   try {

@@ -33,11 +33,7 @@ const updateProfileCustomer = async (req, res) => {
           SET username = $1, password_hash = $2
           WHERE customer_id = $3
           RETURNING customer_id, username`,
-      values: [
-        updatedUserName,
-        updatedPassword,
-        customerId,
-      ],
+      values: [updatedUserName, updatedPassword, customerId],
     };
 
     const results = await pool.query(updateQuery);
@@ -48,6 +44,8 @@ const updateProfileCustomer = async (req, res) => {
         ownerId,
         updatedUserName
       );
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("customersUpdate", { username });
       return res
         .status(200)
         .json({ message: "Customer updated successfully", token: newToken });
@@ -77,23 +75,25 @@ const getElectricScheduleCus = async (req, res) => {
 const getAnnouncementsCus = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
-    const queryText =
-      "SELECT * FROM announcements WHERE owner_id = $1 AND (target_type = 'CUSTOMER' OR target_type = 'BOTH')";
+    const queryText = `
+      SELECT a.*, o.username as owner_username
+      FROM announcements a
+      LEFT JOIN owners o ON a.owner_id = o.owner_id
+      WHERE a.owner_id = $1 AND (a.target_type = 'CUSTOMER' OR a.target_type = 'BOTH')`;
 
     const announcementsResult = await pool.query(queryText, [ownerId]);
 
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res
-        .status(404)
-        .json({ error_message: "No announcements found for the customers" });
+      res.status(404).json({ error_message: "No announcements found for the customers" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getAllCustomerBills = async (req, res) => {
   try {
@@ -311,7 +311,6 @@ const fetchRemaining = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getAllTicketRepliesCus = async (req, res) => {
   try {

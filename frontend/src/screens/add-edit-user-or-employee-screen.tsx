@@ -17,7 +17,6 @@ import DropdownInput from '../components/ui/dropdown-input';
 import ElevatedCard from '../components/ui/elevated-card';
 import {StackScreenProps} from '@react-navigation/stack';
 import {UsersStackNavigationParams} from '../navigation/users-stack-navigation';
-import {DUMMY_EQUIPMENT} from './owner-home-page';
 import {useUser} from '../storage/use-user';
 import client from '../API/client';
 
@@ -35,8 +34,6 @@ type AddUserOrEmployeeForm = {
 };
 
 const USER_TYPES = ['Customer', 'Employee'];
-
-const PLANS = ['10Amp', '5Amp', '2Amp', '20Amp'];
 
 type AddEditUserOrEmployeeScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -121,7 +118,6 @@ const AddEditUserOrEmployeeScreen = ({
 
   function onSubmit({
     address,
-    date,
     name,
     lastName,
     plan,
@@ -131,74 +127,78 @@ const AddEditUserOrEmployeeScreen = ({
     salary,
     equipment,
   }: AddUserOrEmployeeForm) {
-    let reqBody;
-    switch (type) {
-      case 'Customer':
-        reqBody = {
-          name,
-          lastName,
-          username,
-          password,
-          address,
-          planName: plan,
-          equipmentName: equipment,
-        };
-        console.log(reqBody);
-        break;
-      case 'Employee':
-        reqBody = {
-          name: name,
-          lastName: lastName,
-          userName: username,
-          password: password,
-          salary: salary,
-        };
-        break;
-      default:
-        break;
-    }
-
-    if (params.user || params.employee) {
-      console.log(type.toLocaleLowerCase());
-      const responce = client
-        .put(
-          `/${userType}/${type.toLocaleLowerCase()}s/${
-            params.employee?.username || params.user?.username
-          }`,
-          reqBody,
-          {
-            headers: {
-              authorization: `Bearer ${accessToken}`,
-            },
-          },
-        )
-        .then(() => {
-          console.log('Update successful', responce.data);
-        })
-        .catch(error => {
-          // Handle error if needed
-          console.error('Update failed:', error);
-        });
-    } else {
-      console.log(type.toLocaleLowerCase());
-      client
-        .post(`/${userType}/${type.toLocaleLowerCase()}s`, reqBody, {
-          headers: {
-            authorization: `Bearer ${accessToken}`,
-          },
-        })
-        .then(() => {
-          console.log('Creation successful');
-        })
-        .catch(error => {
-          console.error('Creation failed:', error);
-        });
-    }
-
     // Show confirmation alert
     Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
-      {text: 'Cancel'},
-      {text: 'Save', onPress: () => navigation.goBack()},
+      {text: 'Cancel', onPress: ()=>navigation.goBack()},
+      {
+        text: 'Save',
+        onPress: () => {
+          let reqBody;
+          switch (type) {
+            case 'Customer':
+              reqBody = {
+                name,
+                lastName,
+                username,
+                password,
+                address,
+                planName: plan,
+                equipmentName: equipment,
+              };
+              console.log(reqBody);
+              break;
+            case 'Employee':
+              reqBody = {
+                name,
+                lastName,
+                username,
+                password,
+                salary,
+              };
+              break;
+            default:
+              break;
+          }
+
+          if (params.user || params.employee) {
+            console.log(type.toLocaleLowerCase());
+            const responce = client
+              .put(
+                `/${userType}/${type.toLocaleLowerCase()}s/${
+                  params.employee?.username || params.user?.username
+                }`,
+                reqBody,
+                {
+                  headers: {
+                    authorization: `Bearer ${accessToken}`,
+                  },
+                },
+              )
+              .then(() => {
+                console.log('Update successful', responce.data);
+              })
+              .catch(error => {
+                // Handle error if needed
+                console.error('Update failed:', error);
+              });
+          } else {
+            console.log(type.toLocaleLowerCase());
+            client
+              .post(`/${userType}/${type.toLocaleLowerCase()}s`, reqBody, {
+                headers: {
+                  authorization: `Bearer ${accessToken}`,
+                },
+              })
+              .then(() => {
+                console.log('Creation successful');
+              })
+              .catch(error => {
+                console.error('Creation failed:', error);
+              });
+          }
+          navigation.goBack()
+        },
+      },
     ]);
   }
 
@@ -228,7 +228,6 @@ const AddEditUserOrEmployeeScreen = ({
           disabled={userType === 'employee'}
         />
       </View>
-      <Text style={styles.dateText}>Date (auto filled)</Text>
       <View style={styles.fullNameTextInputContainer}>
         <Image
           source={{uri: ImageStrings.ProfileIcon, height: 31, width: 31}}

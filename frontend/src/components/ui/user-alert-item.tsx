@@ -55,14 +55,23 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response.data.error_messsage) {
-        Alert.alert(response?.data?.error_messsage)
+      
+      // Check if there is an error message in the response
+      if (response.data.error_message) {
+        Alert.alert(response.data.error_message);
+      } else {
+        Alert.alert('Closed Successfully');
       }
-      Alert.alert(response?.data?.error_messsage)
     } catch (error) {
       console.log(error);
+      if (error.response && error.response.data && error.response.data.error_message) {
+        Alert.alert(error.response.data.error_message);
+      } else {
+        Alert.alert('An error occurred while closing the ticket');
+      }
     }
   };
+  
 
   async function AssignSelf() {
     try {
@@ -180,7 +189,7 @@ const UserAlertItem = ({item}: UserAlertItemProps) => {
               <View style={styles.closeOrSubmitElevatedButtonContainer}>
                 {<ElevatedCard
                   textStyle={styles.elButtonsText}
-                  onPress={onClose}>
+                  onPress={handleSubmit(onClose)}>
                   Close
                 </ElevatedCard>}
                 {userType === 'employee' &&  (

@@ -11,6 +11,7 @@ type AlertItemProps = {
     announcement_title: "Test Title",
     announcement_message: "announcement meajjbiubafabfa",
     announcement_date: "2024-03-24T21:13:54.552Z"
+    owner_username: string;
 }
   index: number;
 };
@@ -18,7 +19,7 @@ type AlertItemProps = {
 const AnnouncementItem = ({item}: AlertItemProps) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>Owner</Text>
+      <Text style={styles.userText}>{item.owner_username}</Text>
       <Text style={styles.alertText}>{item.announcement_title}</Text>
       <Text style={styles.bottomDate}>{item.announcement_date}</Text>
     </View>

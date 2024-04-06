@@ -188,41 +188,23 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     });
 
     newSocket?.on('newPlan', (data: any) => {
-      console.log(data);
-      setPlans(prevPlans => [data, ...prevPlans]);
+      setRefresh(prev => !prev);
     });
     newSocket?.on('updatePlan', (data: any) => {
-      const {plan_id} = data;
-      setPlans(prevPlans => {
-        const filtered = prevPlans.filter(item => item.plan_id != plan_id);
-        return [data, ...filtered];
-      });
+      setRefresh(prev => !prev);
     });
     newSocket?.on('deletePlan', (data: any) => {
-      const {plan_id} = data;
-      setPlans(prevPlans => {
-        return prevPlans.filter(item => item.plan_id !== plan_id);
-      });
+      setRefresh(prev => !prev);
     });
 
     newSocket?.on('newEquipment', (data: any) => {
-      console.log('New equipmenet added:', data);
-      setEquipments(prevEquipments => [data, ...prevEquipments]);
+      setRefresh(prev => !prev);
     });
     newSocket?.on('updateEquipment', (data: any) => {
-      console.log('Im here');
-      const {oldName, name, price, description, status} = data;
-      const newEq = {name, price, description, status};
-      setEquipments(prevEquipments => {
-        const filtered = prevEquipments.filter(item => item.name != oldName);
-        return [newEq, ...filtered];
-      });
+      setRefresh(prev => !prev);
     });
     newSocket?.on('deleteEquipment', (data: any) => {
-      const {deletedName} = data;
-      setEquipments(prevEquipments => {
-        return prevEquipments.filter(item => item.name !== deletedName);
-      });
+      setRefresh(prev => !prev);
     });
 
     newSocket?.on('newPrice', data => {

@@ -88,6 +88,7 @@ router.get("/issues/:id", authenticateEmployeeToken, getAlertTicketEmp);
 router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
 router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
 
+
 router.get(
   "/assigned-issues",
   authenticateEmployeeToken,

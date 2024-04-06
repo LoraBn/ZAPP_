@@ -95,13 +95,12 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 
   const filter = (searchQ: string, users: (User | Employee)[]) => {
     if (!searchQ) {
-      if(usersType === 'employees' || userType === 'owner'){
+      if (usersType === 'employees' || userType === 'owner') {
         users = employees;
-        return users
-      } 
-      else{
+        return users;
+      } else {
         users = customers;
-        return users
+        return users;
       }
     }
     if (searchQ) {
@@ -123,7 +122,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 
       if (usersType === 'customers') {
         setCustomers(response.data.customers);
-        setFilteredUsers(response.data.customers)
+        setFilteredUsers(response.data.customers);
       } else if (usersType === 'employees') {
         setEmployees(response.data.employees);
         setFilteredUsers(response.data.employees);
@@ -204,6 +203,14 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
           setRefresh(prev => !prev);
         }
       });
+
+      socket.on('customersUpdate', data => {
+        setRefresh(prev => !prev);
+      });
+
+      socket.on('employeeUpdate',(data)=>{
+        setRefresh(prev => !prev)
+      })
     }
   };
 
@@ -234,22 +241,23 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
             {usersType === 'customers' ? 'Customers' : 'Employees'}
           </ScreenHeader>
         </View>
-        <View style={styles.empUsersContainer}>
-          {userType === 'owner' && (
+        {userType === 'owner' && (
+          <View style={styles.empUsersContainer}>
             <Card
               onPress={() => setUsersType('employees')}
               style={styles.cardContainer}
               selected={usersType === 'employees'}>
               <Text style={styles.text}>Employees</Text>
             </Card>
-          )}
-          <Card
-            onPress={() => setUsersType('customers')}
-            style={styles.cardContainer}
-            selected={usersType === 'customers'}>
-            <Text style={styles.text}>Customers</Text>
-          </Card>
-        </View>
+            <Card
+              onPress={() => setUsersType('customers')}
+              style={styles.cardContainer}
+              selected={usersType === 'customers'}>
+              <Text style={styles.text}>Customers</Text>
+            </Card>
+          </View>
+        )}
+        <View style={styles.empUsersContainer}></View>
         <SearchTextInput value={searchQuery} setValue={setSearchQuery} />
         <View style={styles.h10} />
         <View style={styles.filtersContainer}>

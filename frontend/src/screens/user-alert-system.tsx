@@ -77,7 +77,7 @@ const UserAlertSystem = () => {
   useEffect(() => {
     fetchIssues();
     fetchTickets();
-  }, [usersType, refresh]);
+  }, [refresh]);
 
   useEffect(() => {
     establishWebSocketConnection();
@@ -100,7 +100,6 @@ const UserAlertSystem = () => {
           const alertTicketList: ALERT[] = response.data.alert_ticket_list;
           const formattedSections = formatAlertsForSectionList(alertTicketList);
           setSections(formattedSections);
-          console.log('success', sections);
         }
       } catch (error: any) {
         console.log(error.message);
@@ -121,7 +120,6 @@ const UserAlertSystem = () => {
           const alertTicketList: ALERT[] = response.data.support_ticket_list;
           const formattedSections = formatAlertsForSectionList(alertTicketList);
           setSections2(formattedSections);
-          console.log('success', sections);
         }
       } catch (error) {
         console.log(error);
@@ -137,6 +135,13 @@ const UserAlertSystem = () => {
     }
 
     if (socket) {
+
+      socket.on('assignEvent', ({assignedTo, alert_id})=>{
+        console.log("assignedTo", assignedTo)
+        if(userType !== 'customer'){
+          setRefresh(prev => !prev)
+        }
+      })
       socket.on('closedIssue', ({alert_id}) => {
         setSections(prevSections => {
           const updatedSections = [...prevSections];
@@ -147,47 +152,29 @@ const UserAlertSystem = () => {
           const closedSectionIndex = updatedSections.findIndex(
             section => section.title === 'Closed',
           );
-          console.log(openSectionIndex, closedSectionIndex);
 
           const alertIndex = updatedSections[openSectionIndex].data.findIndex(
             alert => alert.alert_id === alert_id,
           );
 
-          console.log(alertIndex);
 
           if (alertIndex !== -1) {
             const removedAlert = updatedSections[openSectionIndex].data.splice(
               alertIndex,
               1,
             )[0];
-            console.log('removed:', removedAlert);
 
             updatedSections[closedSectionIndex].data.push(removedAlert);
           }
 
-          console.log(updatedSections);
           return updatedSections;
         });
       });
 
       socket.on('newIssue', newAlert => {
-        setSections(prevSections => {
-          const updatedSections = [...prevSections];
-
-          // Determine where to add the new alert based on its status (open/closed)
-          const sectionIndex = newAlert.is_closed
-            ? updatedSections.findIndex(section => section.title === 'Closed')
-            : updatedSections.findIndex(section => section.title === 'Open');
-
-          if (sectionIndex !== -1) {
-            // Add the new alert to the appropriate section's data array at the beginning
-            updatedSections[sectionIndex].data.unshift(newAlert);
-            console.log(updatedSections);
-          }
-
-          console.log(updatedSections);
-          return updatedSections;
-        });
+        if(userType !== 'customer'){
+          setRefresh(prev => !prev)
+        }
       });
 
       socket.on('newIssueReply', ({alert_id, message}) => {
@@ -279,13 +266,14 @@ const UserAlertSystem = () => {
               styles.historyContainer,
               {marginBottom: insets.bottom + 25},
             ]}>
+            {usersType ==='employees' && 
             <Pressable
               style={styles.container}
               onPress={() =>
                 setIsCreatingAlert(prevIsCreatingAlert => !prevIsCreatingAlert)
               }>
               <Text style={styles.text}>{'Create Alert'}</Text>
-            </Pressable>
+            </Pressable>}
 
             {sections && sections2 && (
               <SectionList

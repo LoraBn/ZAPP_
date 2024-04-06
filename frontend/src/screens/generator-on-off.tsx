@@ -132,7 +132,7 @@ const GeneratorOnOff = () => {
                   keyboardType="decimal-pad"
                 />
               ) : (
-                <Text style={styles.text}>{getValues().kw_price}</Text>
+                <Text style={styles.text}>{getValues().kw_price || 'No Price'}</Text>
               )}
             </View>
             <ScreenHeader>Timing on/off</ScreenHeader>
