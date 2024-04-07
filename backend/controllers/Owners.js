@@ -1724,19 +1724,18 @@ const createExpense = async (req, res) => {
     const { username, description, amount } = req.body;
     const ownerId = req.user.userId;
 
+    let employeeId = null;  
+
     // Retrieve employee id
     const employeeQuery = `
       SELECT employee_id FROM employees 
       WHERE username = $1 AND owner_id = $2`;
     const employeeResult = await pool.query(employeeQuery, [username, ownerId]);
 
-    if (employeeResult.rows.length === 0) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the employee" });
+    if (employeeResult.rows.length) {
+      employeeId = employeeResult.rows[0].employee_id;
+      
     }
-
-    const employeeId = employeeResult.rows[0].employee_id;
 
     // Insert expense
     const insertQuery = `
