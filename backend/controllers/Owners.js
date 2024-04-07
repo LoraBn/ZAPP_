@@ -1403,64 +1403,66 @@ const calculateProfit = async (req, res) => {
   try {
     const ownerId = req.user.userId;
 
-    // Fetch all bills for all customers under the owner
-    const billsQuery = `
-    WITH LatestBill AS (
-      SELECT 
-          b.customer_id,
-          MAX(b.bill_id) AS latest_bill_id,
-          (SELECT SUM(total_amount) FROM bills WHERE customer_id = b.customer_id AND bill_id = MAX(b.bill_id)) AS remaining_amount
-      FROM 
-          bills b
-      GROUP BY 
-          b.customer_id
-  )
-  SELECT 
-      b.customer_id,
-      MAX(b.bill_id) AS latest_bill,
-      SUM(b.total_amount) - MAX(lb.remaining_amount) AS total_profit
-  FROM 
-      bills b
-  INNER JOIN 
-      customers c ON b.customer_id = c.customer_id
-  INNER JOIN 
-      LatestBill lb ON b.customer_id = lb.customer_id
-  WHERE 
-      c.owner_id = $1
-  GROUP BY 
-      b.customer_id;    
-    `;
-
-    const billsResult = await pool.query(billsQuery, [ownerId]);
-    const totalProfitFromBills = billsResult.rows.reduce(
-      (acc, curr) => acc + curr.total_profit,
-      0
-    );
-
-    // Fetch expenses paid in the current month
-    const currentMonth = new Date().getMonth() + 1; // Month is 0-indexed in JavaScript
+    // Get the current month and year
+    const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
+
+    // Fetch total amount of bills in the current month
+    const billsQuery = `
+      SELECT 
+        SUM(total_amount) AS total_bills
+      FROM 
+        bills
+      WHERE 
+        EXTRACT(MONTH FROM billing_date) = $1
+      AND 
+        EXTRACT(YEAR FROM billing_date) = $2
+      AND 
+        owner_id = $3
+    `;
+    const billsResult = await pool.query(billsQuery, [currentMonth, currentYear, ownerId]);
+    const totalBills = billsResult.rows[0].total_bills;
+
+    console.log(totalBills)
+
+    // Fetch remaining amount of bills with 'PARTIAL' status in the current month
+    const remainingAmountQuery = `
+      SELECT 
+        SUM(remaining_amount) AS remaining_amount
+      FROM 
+        bills
+      WHERE 
+        EXTRACT(MONTH FROM billing_date) = $1
+      AND 
+        EXTRACT(YEAR FROM billing_date) = $2
+      AND 
+        billing_status = 'PARTIAL'
+      AND 
+        owner_id = $3
+    `;
+    const remainingAmountResult = await pool.query(remainingAmountQuery, [currentMonth, currentYear, ownerId]);
+    const remainingAmount = remainingAmountResult.rows[0].remaining_amount;
+
+    console.log(remainingAmount)
+
+    // Fetch total amount of expenses in the current month on the same date
     const expensesQuery = `
       SELECT 
-        SUM(amount) AS total_expenses
+        COALESCE(SUM(amount), 0) AS total_expenses
       FROM 
         expenses
       WHERE 
-        owner_id = $1
+        EXTRACT(MONTH FROM expense_date) = $1
       AND 
-        EXTRACT(MONTH FROM expense_date) = $2
+        EXTRACT(YEAR FROM expense_date) = $2
       AND 
-        EXTRACT(YEAR FROM expense_date) = $3
+        owner_id = $3
     `;
-    const expensesResult = await pool.query(expensesQuery, [
-      ownerId,
-      currentMonth,
-      currentYear,
-    ]);
+    const expensesResult = await pool.query(expensesQuery, [currentMonth, currentYear, ownerId]);
     const totalExpenses = expensesResult.rows[0].total_expenses || 0;
 
-    // Calculate profit
-    const profit = totalProfitFromBills - totalExpenses;
+    // Calculate profit considering remaining amount of partial bills
+    const profit = totalBills - remainingAmount - totalExpenses;
 
     res.status(200).json({ profit });
   } catch (error) {
@@ -1468,6 +1470,7 @@ const calculateProfit = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const updateBill = async (req, res) => {
   try {

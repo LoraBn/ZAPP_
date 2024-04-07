@@ -49,7 +49,7 @@ const AddEditUserOrEmployeeScreen = ({
 
   const userType = useUser(state => state.type);
 
-  const {control, watch, handleSubmit, setValue} =
+  const {control, watch, handleSubmit, setValue, getValues} =
     useForm<AddUserOrEmployeeForm>({
       defaultValues: {
         // PREFILL THESE AS YOU FETCH FROM YOUR API :)
@@ -127,79 +127,82 @@ const AddEditUserOrEmployeeScreen = ({
     salary,
     equipment,
   }: AddUserOrEmployeeForm) {
-    // Show confirmation alert
-    Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
-      {text: 'Cancel', onPress: ()=>navigation.goBack()},
-      {
-        text: 'Save',
-        onPress: () => {
-          let reqBody;
-          switch (type) {
-            case 'Customer':
-              reqBody = {
-                name,
-                lastName,
-                username,
-                password,
-                address,
-                planName: plan,
-                equipmentName: equipment,
-              };
-              console.log(reqBody);
-              break;
-            case 'Employee':
-              reqBody = {
-                name,
-                lastName,
-                username,
-                password,
-                salary,
-              };
-              break;
-            default:
-              break;
-          }
-
-          if (params.user || params.employee) {
-            console.log(type.toLocaleLowerCase());
-            const responce = client
-              .put(
-                `/${userType}/${type.toLocaleLowerCase()}s/${
-                  params.employee?.username || params.user?.username
-                }`,
-                reqBody,
-                {
+    Alert.alert(
+      'Confirm?',
+      `Do you confirm adding the user?\nUser Details:\nUsername: ${getValues('username')}\nPassword: ${getValues('password')}`,
+      [
+        {text: 'Cancel', onPress: () => navigation.goBack()},
+        {
+          text: 'Save',
+          onPress: () => {
+            let reqBody;
+            switch (type) {
+              case 'Customer':
+                reqBody = {
+                  name,
+                  lastName,
+                  username,
+                  password,
+                  address,
+                  planName: plan,
+                  equipmentName: equipment,
+                };
+                console.log(reqBody);
+                break;
+              case 'Employee':
+                reqBody = {
+                  name,
+                  lastName,
+                  username,
+                  password,
+                  salary,
+                };
+                break;
+              default:
+                break;
+            }
+    
+            if (params.user || params.employee) {
+              console.log(type.toLocaleLowerCase());
+              const responce = client
+                .put(
+                  `/${userType}/${type.toLocaleLowerCase()}s/${
+                    params.employee?.username || params.user?.username
+                  }`,
+                  reqBody,
+                  {
+                    headers: {
+                      authorization: `Bearer ${accessToken}`,
+                    },
+                  },
+                )
+                .then(() => {
+                  console.log('Update successful', responce.data);
+                })
+                .catch(error => {
+                  // Handle error if needed
+                  console.error('Update failed:', error);
+                });
+            } else {
+              client
+                .post(`/${userType}/${type.toLocaleLowerCase()}s`, reqBody, {
                   headers: {
                     authorization: `Bearer ${accessToken}`,
                   },
-                },
-              )
-              .then(() => {
-                console.log('Update successful', responce.data);
-              })
-              .catch(error => {
-                // Handle error if needed
-                console.error('Update failed:', error);
-              });
-          } else {
-            console.log(type.toLocaleLowerCase());
-            client
-              .post(`/${userType}/${type.toLocaleLowerCase()}s`, reqBody, {
-                headers: {
-                  authorization: `Bearer ${accessToken}`,
-                },
-              })
-              .then(() => {
-                console.log('Creation successful');
-              })
-              .catch(error => {
-                console.error('Creation failed:', error);
-              });
-          }
-          navigation.goBack()
+                })
+                .then(() => {
+                  console.log('Creation successful');
+                })
+                .catch(error => {
+                  console.error('Creation failed:', error);
+                });
+            }
+            navigation.goBack();
+          },
         },
-      },
-    ]);
+      ]
+    );
+    
   }
 
   return (
