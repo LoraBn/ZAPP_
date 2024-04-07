@@ -7,6 +7,7 @@ type AlertItemProps = {
   item: {
     alert_id: number;
     alert_message: string;
+    alert_type: string;
     created_by: string;
     created_at: Date;
   };
@@ -17,7 +18,7 @@ const AlertItem = ({item}: AlertItemProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.userText}>{item.created_by}</Text>
-      <Text style={styles.alertText}>{item.alert_message}</Text>
+      <Text style={styles.alertText}>{item.alert_type || item.ticket_message}</Text>
       <Text style={styles.bottomDate}>{dateFromNow(item.created_at)}</Text>
     </View>
   );

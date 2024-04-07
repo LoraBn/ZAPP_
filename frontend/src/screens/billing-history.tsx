@@ -15,11 +15,30 @@ const BillingHistory = () => {
 
   const [bills, setBills] = useState<Bill>();
 
-  const {type, accessToken} = useUser(state => state);
+  const {type, accessToken, socket, setSocket} = useUser(state => state);
+
+  const [refresh, setRefresh] = useState<boolean>(false)
 
   useEffect(() => {
     fetchAllBills();
-  }, []);
+  }, [refresh]);
+
+  useEffect(()=>{
+    establishWebSocketConnection();
+  }, [])
+
+  const establishWebSocketConnection = () => {
+    if (!socket) {
+      const newSocket = io(ioString);
+      setSocket(newSocket);
+      console.log('creating new socket');
+    }
+    if (socket) {
+      socket.on('newBill', data => {
+        setRefresh(prev => !prev);
+      });
+    }
+  };
 
   const fetchAllBills = async () => {
     try {

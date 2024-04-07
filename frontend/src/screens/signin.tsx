@@ -1,4 +1,4 @@
-import {Image, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Alert, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
 import React, {useEffect} from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
@@ -86,6 +86,7 @@ const Signin = ({navigation}: SigninProps) => {
       }
     } catch (error) {
       console.log(error);
+      Alert.alert(error.data.error_message)
     }
   }
 

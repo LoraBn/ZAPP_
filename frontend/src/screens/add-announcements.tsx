@@ -41,7 +41,7 @@ const AddAnnouncements = ({navigation}: AddAnnouncementsProps) => {
     description,
     title,
   }: AddAnnouncementsForm) {
-    Alert.alert('Confirm?', 'Do you confirm your info aw shi hek??', [
+    Alert.alert('Confirm?', 'Do you comfirm sending the Announcement?', [
       {
         text: 'Cancel',
       },

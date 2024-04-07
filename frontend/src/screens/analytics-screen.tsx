@@ -109,16 +109,16 @@ const AnalyticsScreen = () => {
 
   const renderPieChart = () => {
     if (!scheduleData || !scheduleData.schedule) {
-      return null; // No schedule data available, return null or render a loading indicator
+      return null; 
     }
   
-    const totalHoursInDay = 24; // Total hours in a day
+    const totalHoursInDay = 24;
   
-    // Initialize an array to store data for each schedule item
+   
     const data = [];
   
-    // Define color pattern
-    const colorPattern = ['white', 'yellow'];
+  
+    const colorPattern = ['pink', 'orange', "purple" ];
   
     // Iterate over each schedule item
     let totalTimeSpent = 0;
@@ -148,8 +148,6 @@ const AnalyticsScreen = () => {
     // Calculate the remaining available time in the day
     const remainingTime = totalHoursInDay - totalTimeSpent;
     const remainingPercentage = (remainingTime / totalHoursInDay) * 100;
-
-    console.log(totalTimeSpent)
   
     // Push the remaining time data to the array
     data.push({
@@ -164,9 +162,9 @@ const AnalyticsScreen = () => {
           Total Time Difference per Schedule (Percentage of 24 hours)
         </Text>
         <PieChart data={data} />
-        <Text>Total Covered Time is: 8 hours</Text>
+        <Text>Total Covered Time is: {Math.ceil(totalTimeSpent)} hours</Text>
         
-        <Text>Green is the not covered time</Text>
+        <Text>Green is the uncovered time</Text>
       </View>
     );
   };

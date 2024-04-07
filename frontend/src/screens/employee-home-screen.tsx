@@ -182,10 +182,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       setIssues(prev => [data, ...prev]);
     });
 
-    newSocket?.on('ScheduleUpdate', (data: any) => {
-      setRefresh(prev => !prev);
-    });
-
+    
     newSocket?.on('newPlan', (data: any) => {
       setRefresh(prev => !prev);
     });
@@ -195,7 +192,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     newSocket?.on('deletePlan', (data: any) => {
       setRefresh(prev => !prev);
     });
-
+    
     newSocket?.on('newEquipment', (data: any) => {
       setRefresh(prev => !prev);
     });
@@ -205,7 +202,10 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     newSocket?.on('deleteEquipment', (data: any) => {
       setRefresh(prev => !prev);
     });
-
+    
+    newSocket?.on('ScheduleUpdate', (data: any) => {
+      setRefresh(prev => !prev);
+    });
     newSocket?.on('newPrice', data => {
       setRefresh(prev => !prev);
     });

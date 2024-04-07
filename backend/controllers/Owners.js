@@ -346,6 +346,7 @@ const createCustomerAccount = async (req, res) => {
 
 const updateCustomerAccount = async (req, res) => {
   try {
+
     const ownerUserId = req.user.userId;
     const customerUsername = req.params.username;
     const {
@@ -386,7 +387,7 @@ const updateCustomerAccount = async (req, res) => {
         ? (
             await pool.query(
               "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
-              [planName, ownerId]
+              [planName, ownerUserId]
             )
           ).rows[0]?.plan_id || existingCustomer.plan_id
         : existingCustomer.plan_id,
@@ -708,7 +709,7 @@ const createAnnouncement = async (req, res) => {
     req.app
       .get("io")
       .to(room)
-      .emit("newAnnouncement", { announcement_title, announcement_message });
+      .emit("newAnnouncement", { owner_username: req.user.username, announcement_title, announcement_message });
     console.log("annoncement sent to room", room);
     res.status(201).json({
       message: "Announcement created",
@@ -2580,7 +2581,7 @@ const getAllAlertTickets = async (req, res) => {
       FROM alerts a
       JOIN owners o ON a.owner_id = o.owner_id
       LEFT JOIN employees e ON a.created_by = e.employee_id
-      LEFT JOIN owners co ON a.created_by = co.owner_id AND a.user_type = 'owner'
+      LEFT JOIN owners co ON a.owner_id = co.owner_id AND a.user_type = 'owner'
       LEFT JOIN employees ce ON a.created_by = ce.employee_id AND a.user_type = 'employee'
       WHERE a.owner_id = $1
       ORDER BY a.created_at DESC

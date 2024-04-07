@@ -137,7 +137,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
 
       newSocket.on('newPrice', (data)=>{
         setRefresh(prev => !prev)
-      })
+      });
     }
   };
 

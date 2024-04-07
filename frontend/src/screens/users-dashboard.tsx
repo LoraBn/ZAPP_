@@ -74,7 +74,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
     'customers',
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<string[]>([]);
+  const [filters, setFilters] = useState<string[]>(['Not Done']);
   const [employeeFilters, setEmployeeFilters] = useState<string[]>([]);
   const [isBilling, setIsBilling] = useState(false);
 

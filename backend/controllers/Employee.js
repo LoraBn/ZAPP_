@@ -752,7 +752,7 @@ const getAllOpenAlertTickets = async (req, res) => {
       FROM alerts a
       JOIN owners o ON a.owner_id = o.owner_id
       LEFT JOIN employees e ON a.created_by = e.employee_id
-      LEFT JOIN owners co ON a.created_by = co.owner_id AND a.user_type = 'owner'
+      LEFT JOIN owners co ON a.owner_id = co.owner_id AND a.user_type = 'owner'
       LEFT JOIN employees ce ON a.created_by = ce.employee_id AND a.user_type = 'employee'
       WHERE a.owner_id = $1
       ORDER BY a.created_at DESC
@@ -846,7 +846,7 @@ const createAlertTicketEmp = async (req, res) => {
     const { alert_type, alert_message } = req.body;
 
     const queryText = `INSERT INTO alerts (owner_id, alert_type, alert_message, is_assigned, is_closed, user_type, created_by) 
-      VALUES($1, $2, $3, false, false, 'owner', $4)
+      VALUES($1, $2, $3, false, false, 'employee', $4)
       RETURNING *`;
 
     const result = await pool.query(queryText, [
