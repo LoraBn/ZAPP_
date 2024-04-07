@@ -30,6 +30,7 @@ const {
   getEquipmentsEmp,
   getPlansEmp,
   getAssignedTicketsEmp,
+  getSalary,
 } = require("../controllers/Employee");
 const router = Router();
 
@@ -53,6 +54,8 @@ router.delete(
   authenticateEmployeeToken,
   deleteCustomerEmp
 );
+
+router.get('/salary', authenticateEmployeeToken, getSalary)
 
 //bills
 router.get("/bills", authenticateEmployeeToken, getAllBillsEmp);

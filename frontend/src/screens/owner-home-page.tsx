@@ -253,6 +253,16 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     newSocket.on('newBill', data => {
       setRefresh(prev => !prev);
     });
+
+    newSocket?.on('newPlan', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+    newSocket?.on('updatePlan', (data: any) => {
+      setRefresh(prev => !prev);
+    });
+    newSocket?.on('deletePlan', (data: any) => {
+      setRefresh(prev => !prev);
+    });
   };
 
   return (

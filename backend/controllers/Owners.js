@@ -106,7 +106,8 @@ const ownerUpdate = async (req, res) => {
 const getCustomersList = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const queryText = "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
+    const queryText =
+      "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [ownerId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ customers: results.rows });
@@ -120,7 +121,8 @@ const getCustomersList = async (req, res) => {
 const getEmployeeList = async (req, res) => {
   try {
     const { userId } = req.user;
-    const queryText = "SELECT * FROM employees WHERE owner_id = $1 ORDER BY username ASC";
+    const queryText =
+      "SELECT * FROM employees WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [userId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ employees: results.rows });
@@ -304,8 +306,8 @@ const createCustomerAccount = async (req, res) => {
       [ownerId, equipmentName]
     );
     const planResult = await pool.query(
-      "SELECT * FROM plans_prices WHERE plan_name = $1",
-      [planName]
+      "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
+      [planName, ownerId]
     );
 
     if (planResult.rows.length === 0) {
@@ -383,8 +385,8 @@ const updateCustomerAccount = async (req, res) => {
       plan_id: planName
         ? (
             await pool.query(
-              "SELECT * FROM plans_prices WHERE plan_name = $1",
-              [planName]
+              "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
+              [planName, ownerId]
             )
           ).rows[0]?.plan_id || existingCustomer.plan_id
         : existingCustomer.plan_id,
@@ -420,7 +422,7 @@ const updateCustomerAccount = async (req, res) => {
     const result = await pool.query(updateQuery);
 
     if (result.rowCount > 0) {
-      let room = `all${ownerId}`;
+      let room = `all${ownerUserId}`;
       req.app.get("io").to(room).emit("customersUpdate", { username });
       res.status(201).json({
         message: "Customer updated successfully!",
@@ -458,7 +460,7 @@ const deleteCustomer = async (req, res) => {
         "DELETE FROM customers WHERE owner_id = $1 AND customer_id = $2";
       await pool.query(deleteCustomerQuery, [ownerId, customerId]);
       let room = `all${ownerId}`;
-      req.app.get('io').to(room).emit('customersUpdate',{username})
+      req.app.get("io").to(room).emit("customersUpdate", { username });
       res.status(202).json({ message: "User deleted successfully" });
     } else {
       res.status(404).json({ error_message: "User not found" });
@@ -663,14 +665,15 @@ const getAnnouncements = async (req, res) => {
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res.status(404).json({ error_message: "No announcements found for the owner" });
+      res
+        .status(404)
+        .json({ error_message: "No announcements found for the owner" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const createAnnouncement = async (req, res) => {
   try {
@@ -1197,7 +1200,7 @@ const calculateBill = async (req, res) => {
 
     if (planResult.rows.length === 0) {
       return res
-        .status(400)
+        .status(402)
         .json({ error_message: "Plan price not found for the customer" });
     }
 
@@ -1213,7 +1216,7 @@ const calculateBill = async (req, res) => {
     const kWhPriceResult = await pool.query(kWhPriceQuery, [ownerId]);
 
     if (kWhPriceResult.rows.length === 0) {
-      return res.status(400).json({ error_message: "kWh price not found" });
+      return res.status(401).json({ error_message: "kWh price not found" });
     }
 
     const kWhPrice = kWhPriceResult.rows[0].kwh_price;
@@ -1724,7 +1727,7 @@ const createExpense = async (req, res) => {
     const { username, description, amount } = req.body;
     const ownerId = req.user.userId;
 
-    let employeeId = null;  
+    let employeeId = null;
 
     // Retrieve employee id
     const employeeQuery = `
@@ -1734,7 +1737,6 @@ const createExpense = async (req, res) => {
 
     if (employeeResult.rows.length) {
       employeeId = employeeResult.rows[0].employee_id;
-      
     }
 
     // Insert expense
@@ -2319,15 +2321,14 @@ const createAlertTicket = async (req, res) => {
     const ownerId = req.user.userId;
     const { alert_type, alert_message } = req.body;
 
-    const queryText = `INSERT INTO alerts (owner_id, alert_type, alert_message, is_assigned, is_closed, user_type, created_by) 
-      VALUES($1, $2, $3, false, false, 'owner', $4)
+    const queryText = `INSERT INTO alerts (owner_id, alert_type, alert_message, is_assigned, is_closed, user_type) 
+      VALUES($1, $2, $3, false, false, 'owner')
       RETURNING *`;
 
     const result = await pool.query(queryText, [
       ownerId,
       alert_type,
       alert_message,
-      ownerId,
     ]);
 
     if (result.rows.length > 0) {
@@ -2343,7 +2344,7 @@ const createAlertTicket = async (req, res) => {
         is_closed: false,
         created_at: result.rows[0].created_at,
         created_by: req.user.username,
-        replies: [], // Reverse the order of replies to match the structure
+        replies: [],
       };
 
       // Emit the created alert through socket

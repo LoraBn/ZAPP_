@@ -65,7 +65,8 @@ const updateProfile = async (req, res) => {
 const getCustomerListEmployee = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
-    const queryText = "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
+    const queryText =
+      "SELECT * FROM customers WHERE owner_id = $1 ORDER BY username ASC";
     pool.query(queryText, [ownerId], (err, results) => {
       if (err) throw err;
       res.status(200).json({ customers: results.rows });
@@ -106,8 +107,8 @@ const createCustomerAccountEmployee = async (req, res) => {
       [ownerId, equipmentName]
     );
     const planResult = await pool.query(
-      "SELECT * FROM plans_prices WHERE plan_name = $1",
-      [planName]
+      "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
+      [planName,ownerId]
     );
 
     if (planResult.rows.length === 0) {
@@ -187,8 +188,8 @@ const updateCustomerAccountEmployee = async (req, res) => {
       plan_id: planName
         ? (
             await pool.query(
-              "SELECT * FROM plans_prices WHERE plan_name = $1",
-              [planName]
+              "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
+              [planName,ownerId]
             )
           ).rows[0].plan_id
         : existingCustomer.plan_id,
@@ -246,6 +247,25 @@ const updateCustomerAccountEmployee = async (req, res) => {
     }
   } catch (error) {
     console.error("Error updating customer account:", error);
+    res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const getSalary = async (req, res) => {
+  try {
+    const employeeId = req.user.userId;
+
+    const query = `SELECT salary FROM employees WHERE employee_id = $1`;
+
+    const results = await pool.query(query, [employeeId]);
+
+    if (!results) {
+      res.json({ message: "No Salary" });
+    }
+
+    res.json({ salary: results.rows[0].salary });
+  } catch (error) {
+    console.error("Error deleting customer:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -1105,14 +1125,15 @@ const getAnnouncementsEmp = async (req, res) => {
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res.status(404).json({ error_message: "No announcements found for the employee" });
+      res
+        .status(404)
+        .json({ error_message: "No announcements found for the employee" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getElectricScheduleEmp = async (req, res) => {
   try {
@@ -1177,6 +1198,7 @@ module.exports = {
   createCustomerAccountEmployee,
   updateCustomerAccountEmployee,
   deleteCustomerEmp,
+  getSalary,
   getAllBillsEmp,
   getCustomerBillEmp,
   createBillEmp,

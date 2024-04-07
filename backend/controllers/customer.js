@@ -86,14 +86,15 @@ const getAnnouncementsCus = async (req, res) => {
     if (announcementsResult.rows.length > 0) {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
-      res.status(404).json({ error_message: "No announcements found for the customers" });
+      res
+        .status(404)
+        .json({ error_message: "No announcements found for the customers" });
     }
   } catch (error) {
     console.error("Error getting announcements:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getAllCustomerBills = async (req, res) => {
   try {
@@ -134,16 +135,17 @@ const getAllOpenTicketsCus = async (req, res) => {
 
     // Retrieve all support tickets for the provided owner
     const ticketsQuery = `
-      SELECT s.ticket_id, s.owner_id, s.customer_id, c.username AS customer_username, o.username AS owner_username, s.ticket_message,
-             s.is_closed, s.created_at
-      FROM support_tickets s
-      JOIN owners o ON s.owner_id = o.owner_id
-      JOIN customers c on c.owner_id = $1
-      LEFT JOIN owners co ON s.owner_id = co.owner_id
-      WHERE c.customer_id = $2
-      ORDER BY s.created_at DESC
+    SELECT s.ticket_id, s.owner_id, s.customer_id, c.username AS customer_username, o.username AS owner_username, s.ticket_message,
+           s.is_closed, s.created_at
+    FROM support_tickets s
+    JOIN owners o ON s.owner_id = o.owner_id
+    JOIN customers c ON c.customer_id = s.customer_id -- Fixed join condition
+    LEFT JOIN owners co ON s.owner_id = co.owner_id
+    WHERE c.customer_id = $1
+    ORDER BY s.created_at DESC
     `;
-    const ticketsResult = await pool.query(ticketsQuery, [ownerId, customerId]);
+
+    const ticketsResult = await pool.query(ticketsQuery, [customerId]); // Use customerId as parameter
 
     const supportTicketList = [];
     for (const ticket of ticketsResult.rows) {
@@ -172,12 +174,12 @@ const getAllOpenTicketsCus = async (req, res) => {
         ticket_message: ticket.ticket_message,
         is_closed: ticket.is_closed,
         created_at: ticket.created_at,
-        replies: replies.reverse(), // Reverse the order of replies to match the structure
+        replies: replies, // Reverse the order of replies to match the structure
       };
       supportTicketList.push(supportTicket);
     }
 
-    res.status(200).json({ support_ticket_list: supportTicketList });
+    res.status(200).json({ support_ticket_list: supportTicketList }); // Use consistent key name
   } catch (error) {
     console.error("Error retrieving all support tickets:", error);
     res.status(500).json({ error_message: "Internal Server Error" });

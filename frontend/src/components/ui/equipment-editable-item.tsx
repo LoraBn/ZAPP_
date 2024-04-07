@@ -1,5 +1,5 @@
 import {Alert, Image, Pressable, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Equipment} from '../../screens/owner-home-page';
 import {Colors} from '../../utils/colors';
 import {ImageStrings} from '../../assets/image-strings';
@@ -7,7 +7,7 @@ import {useForm} from 'react-hook-form';
 import TextInput from './text-input';
 import DropdownInput from './dropdown-input';
 import client from '../../API/client';
-import { useUser } from '../../storage/use-user';
+import {useUser} from '../../storage/use-user';
 
 type EquipmentEditableItemProps = {
   item: Equipment;
@@ -17,54 +17,65 @@ type EquipmentEditableItemProps = {
 export type EquipmentForm = {
   name: string;
   price: string;
-  status: "ACTIVE" | "INACTIVE";
+  status: 'ACTIVE' | 'INACTIVE';
   description: string;
 };
 
 const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
-  const {control, handleSubmit} = useForm<EquipmentForm>({
+  const {control, handleSubmit, setValue} = useForm<EquipmentForm>({
     defaultValues: {
-      description: item.description ?? '',
-      name: item.name ?? '',
+      description: item.description || '',
+      name: item.name || '',
       price: item.price ? item.price.toString() : '',
-      status: item.status ?? "ACTIVE",
+      status: item.status ?? 'ACTIVE',
     },
   });
-  const {setSocket, socket, accessToken,type} = useUser(
-    state => state,
-  );
+  const {setSocket, socket, accessToken, type} = useUser(state => state);
 
+  
   const [isEditing, setIsEditing] = useState(false);
-
+  
+  if (isEditing) {
+    setValue('description', item.description);
+    setValue('name', item.name);
+    setValue('price', item.price.toString());
+    setValue('status', item.status);
+  }
+  
   async function onSubmit(data: EquipmentForm) {
     //HERE
     //SUCCESS
     try {
-      const responce = await client.put(`/${type}/equipment/${encodeURIComponent(item.name)}`,data, {
-        headers: {
-          authorization: `Bearer ${accessToken}`
+      const responce = await client.put(
+        `/${type}/equipment/${encodeURIComponent(item.name)}`,
+        data,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
         },
-        
-      });
-      console.log(responce.data.message) 
-      
+      );
+      console.log(responce.data.message);
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
     setIsEditing(false);
   }
 
-  async function deleteItem(name:string){
+  async function deleteItem(name: string) {
     try {
-      const responce = await client.delete(`/${type}/equipment/${encodeURIComponent(name)}`,{
-        headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
+      const responce = await client.delete(
+        `/${type}/equipment/${encodeURIComponent(name)}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
       console.log(responce.data.message);
-      Alert.alert(responce.data.message)
+      Alert.alert(responce.data.message);
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
@@ -81,7 +92,9 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             style={styles.textInputStyles}
           />
         ) : (
-          <Text style={[styles.text, styles.semiBold]}>{item.name}</Text>
+          item.equipment_id && (
+            <Text style={[styles.text, styles.semiBold]}>{item.name}</Text>
+          )
         )}
         {isEditing ? (
           <TextInput
@@ -94,13 +107,13 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             keyboardType="number-pad"
           />
         ) : (
-          <Text style={styles.text}>{item.price}</Text>
+          item.equipment_id && <Text style={styles.text}>{item.price}</Text>
         )}
         {isEditing ? (
           <DropdownInput
             control={control}
             name="status"
-            items={["ACTIVE", "INACTIVE"]}
+            items={['ACTIVE', 'INACTIVE']}
             backgroundColor={Colors.White}
             textColor={Colors.Black}
             placeholder="Status"
@@ -108,7 +121,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             textSize={14}
           />
         ) : (
-          <Text style={styles.text}>{item.status}</Text>
+          item.equipment_id && <Text style={styles.text}>{item.status}</Text>
         )}
       </View>
       {isEditing ? (
@@ -121,15 +134,17 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
           textColor={Colors.Black}
         />
       ) : (
-        <Text style={styles.text}>{item.description}</Text>
+        item.equipment_id && <Text style={styles.text}>{item.description}</Text>
       )}
       <View style={styles.bottomItemsContainer}>
         {!isEditing ? (
-          <Pressable onPress={() => setIsEditing(true)} style={styles.top}>
-            <Image
-              source={{uri: ImageStrings.EditIcon, height: 44, width: 21}}
-            />
-          </Pressable>
+          item.equipment_id && (
+            <Pressable onPress={() => setIsEditing(true)} style={styles.top}>
+              <Image
+                source={{uri: ImageStrings.EditIcon, height: 44, width: 21}}
+              />
+            </Pressable>
+          )
         ) : (
           <Pressable onPress={handleSubmit(onSubmit)} style={styles.smallTop}>
             <Image
@@ -138,27 +153,29 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
           </Pressable>
         )}
 
-        <Pressable
-          onPress={() =>
-            Alert.alert(
-              'Are you sure you want to delete?',
-              'This action is irreversible.',
-              [
-                {text: 'Cancel'},
-                {
-                  text: 'Confirm',
-                  onPress: () => {
-                    // HERE
-                    deleteItem(item.name);
+        {item.equipment_id && (
+          <Pressable
+            onPress={() =>
+              Alert.alert(
+                'Are you sure you want to delete?',
+                'This action is irreversible.',
+                [
+                  {text: 'Cancel'},
+                  {
+                    text: 'Confirm',
+                    onPress: () => {
+                      // HERE
+                      deleteItem(item.name);
+                    },
                   },
-                },
-              ],
-            )
-          }>
-          <Image
-            source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
-          />
-        </Pressable>
+                ],
+              )
+            }>
+            <Image
+              source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
+            />
+          </Pressable>
+        )}
       </View>
     </View>
   );

@@ -86,8 +86,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 
   useEffect(() => {
     if (userType !== 'customer') {
-      let users;
-      usersType === 'customers' ? (users = customers) : (users = employees);
+      let users = usersType === 'customers' ? customers : employees;
       const filteredUsers = filter(searchQuery, users);
       setFilteredUsers(filteredUsers);
     }
@@ -95,43 +94,53 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
 
   const filter = (searchQ: string, users: (User | Employee)[]) => {
     if (!searchQ) {
-      if (usersType === 'employees' || userType === 'owner') {
-        users = employees;
-        return users;
-      } else {
-        users = customers;
-        return users;
-      }
+      return users;
     }
-    if (searchQ) {
-      return users.filter(
-        user =>
-          user.username.toLowerCase().includes(searchQ.toLowerCase()) ||
-          user.name.toLowerCase().includes(searchQ.toLowerCase()),
-      );
-    }
+    return users.filter(
+      user =>
+        user.username.toLowerCase().includes(searchQ.toLowerCase()) ||
+        user.name.toLowerCase().includes(searchQ.toLowerCase()),
+    );
   };
 
   const fetchUsers = async () => {
     try {
       const response = await client.get(`/${userType}/${usersType}`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
+        headers: {authorization: `Bearer ${accessToken}`},
       });
 
       if (usersType === 'customers') {
-        setCustomers(response.data.customers);
-        setFilteredUsers(response.data.customers);
+
+        
+        setCustomers(response.data.customers.filter(
+          (customer: User) => {
+            if(isBilling && filters.includes("Done")){
+              return customer.is_cycled == true
+            }
+            else{
+              return customer.is_cycled == false
+            }
+          },
+        ));
+        setFilteredUsers(response.data.customers.filter(
+          (customer: User) => {
+            if(isBilling && filters.includes("Done")){
+              return customer.is_cycled == true
+            }
+            else{
+              return customer.is_cycled == false
+            }
+          },
+        ));
       } else if (usersType === 'employees') {
         setEmployees(response.data.employees);
         setFilteredUsers(response.data.employees);
       }
     } catch (error) {
       console.error(error);
-      // Handle error appropriately, maybe show an alert or set a default value for isBilling
     }
   };
+
 
   const fetchBillingCycle = async () => {
     try {
@@ -208,9 +217,9 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
         setRefresh(prev => !prev);
       });
 
-      socket.on('employeeUpdate',(data)=>{
-        setRefresh(prev => !prev)
-      })
+      socket.on('employeeUpdate', data => {
+        setRefresh(prev => !prev);
+      });
     }
   };
 

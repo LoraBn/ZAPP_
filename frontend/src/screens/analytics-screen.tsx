@@ -164,6 +164,9 @@ const AnalyticsScreen = () => {
           Total Time Difference per Schedule (Percentage of 24 hours)
         </Text>
         <PieChart data={data} />
+        <Text>Total Covered Time is: 8 hours</Text>
+        
+        <Text>Green is the not covered time</Text>
       </View>
     );
   };

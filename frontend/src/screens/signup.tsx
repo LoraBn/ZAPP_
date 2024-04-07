@@ -134,7 +134,7 @@ const SignUp = ({navigation}: SignUpProps) => {
           secureTextEntry
         />
         <Text style={styles.noteText}>
-          Note: You have to be an owner to sign up.
+          Note: You Will SignUp As An Owner.
         </Text>
         <ElevatedCard
           onPress={handleSubmit(onSubmit)}

@@ -38,6 +38,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     useUser(state => state);
 
   useEffect(() => {
+    fetchSalary();
     establishWebSocketConnection();
     return () => {
       if (socket != null) {
@@ -55,27 +56,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     fetchPrice();
     fetchEquipments();
     fetchPlans();
-    fetchAssignedAlerts();
   }, [refresh]);
-
-  const [assignedAlerts, setAssignedAlerts] = useState<Alert[]>();
-
-  const fetchAssignedAlerts = async () => {
-    try {
-      const response = client.get(`/${type}/assigned-issues`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if ((await response).data) {
-        setAssignedAlerts((await response).data.assigned_alerts);
-        console.log((await response).data.assigned_alerts);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -85,8 +66,8 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
         },
       });
       setAnnouncements(response.data.announcements.reverse());
-    } catch (error) {
-      console.error('Error fetching announcements:', error);
+    } catch (error: any) {
+      console.log(error.data?.error_message)
     }
   };
 
@@ -119,6 +100,24 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       console.log(error);
     }
   };
+
+  const [salary, setSalary] = useState<any>();
+
+  const fetchSalary = async () => {
+    try {
+      const response = await client.get(`/${type}/salary`,{
+        headers: {
+          authorization: `Bearer ${accessToken}`
+        }
+      })
+
+      if(response?.data.salary){
+        setSalary(response.data.salary)
+      }
+    } catch (error: any) {
+      console.log(error.data?.error_message)
+    }
+  }
 
   const fetchEquipments = async () => {
     try {
@@ -225,11 +224,11 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           <Text style={styles.amountText}>$ {kwhPrice}</Text>
         </WhiteCard>
         <Text style={styles.profitText} numberOfLines={2}>
-          Assigned Alerts
+          Salary
         </Text>
         <WhiteCard
           style={[styles.amountContainer, {backgroundColor: Colors.White}]}>
-          <Text style={styles.amountText}>{assignedAlerts?.length || '0'}</Text>
+          <Text style={styles.amountText}>$ {salary}</Text>
         </WhiteCard>
       </View>
       <View>
