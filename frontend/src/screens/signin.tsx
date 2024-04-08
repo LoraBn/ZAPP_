@@ -1,5 +1,13 @@
-import {Alert, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React, {useEffect} from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '../utils/colors';
 import {ImageStrings} from '../assets/image-strings';
 import {useForm} from 'react-hook-form';
@@ -25,7 +33,6 @@ const Signin = ({navigation}: SigninProps) => {
   const {
     setAccessToken,
     setExpiresAtToken,
-    setRefreshToken,
     setType,
     setSocket,
   } = useUser(state => state);
@@ -34,12 +41,15 @@ const Signin = ({navigation}: SigninProps) => {
     defaultValues: {password: '', username: ''},
   });
 
+  const [loading, setLoading] = useState<boolean>(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = await AsyncStorage.getItem('token');
         const userType = await AsyncStorage.getItem('userType');
         if (token && userType) {
+          setLoading(true);
           const response = await client.get('/auth', {
             headers: {
               authorization: `Bearer ${token}`,
@@ -50,10 +60,15 @@ const Signin = ({navigation}: SigninProps) => {
             console.log(userType);
             setType(userType);
             setAccessToken(token);
+          } else {
+            setLoading(false);
+            return;
           }
         }
       } catch (error) {
         console.log(error);
+        setLoading(false);
+        return;
       }
     };
     fetchData();
@@ -65,9 +80,13 @@ const Signin = ({navigation}: SigninProps) => {
   };
 
   async function onSubmit({password, username}: SigninForm) {
+    if(!username || !password){
+      Alert.alert('Password and usernames are required fields');
+      return;
+    }
     // HERE API CALLS
     try {
-      console.log(password, username);
+      setLoading(true);
       const responce = await client.post('/signin', {
         userName: username,
         password: password,
@@ -81,18 +100,25 @@ const Signin = ({navigation}: SigninProps) => {
         const userType = responce.data.userType;
         setType(responce.data.userType || userType);
         setAccessToken(responce.data.token);
-        setRefreshToken('MockTokenRefresh');
         setExpiresAtToken(dayjs(new Date()).unix());
+      } else{
+        Alert.alert(responce?.data.error_message);
+        setLoading(false)
       }
-    } catch (error) {
-      console.log(error);
-      Alert.alert(error.data.error_message)
+    } catch (error: any) {
+      setLoading(false)
+      console.log(error.data.error_message);
+      Alert.alert('Invalid username or password! Please try again');
+      return;
     }
   }
 
   return (
     <ScrollView style={styles.screen}>
       <Image source={{uri: ImageStrings.AuthLogo, height: 300, width: 300}} />
+      <View>
+        {loading && <ActivityIndicator size="large" color={Colors.Blue} />}
+      </View>
       <View style={styles.authFormContainer}>
         <Text style={styles.zappText}>Zapp</Text>
         <AuthTextInput

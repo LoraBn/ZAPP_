@@ -786,7 +786,7 @@ const getAllOpenAlertTickets = async (req, res) => {
         LEFT JOIN owners o ON ar.owner_id = o.owner_id
         LEFT JOIN employees e ON ar.employee_id = e.employee_id
         WHERE ar.alert_id = $1
-        ORDER BY ar.created_at DESC
+        ORDER BY ar.created_at
       `;
       const repliesResult = await pool.query(repliesQuery, [alert.alert_id]);
       const replies = repliesResult.rows;
@@ -802,7 +802,7 @@ const getAllOpenAlertTickets = async (req, res) => {
         is_closed: alert.is_closed,
         created_at: alert.created_at,
         created_by: alert.created_by,
-        replies: replies.reverse(), // Reverse the order of replies to match the structure
+        replies: replies, // Reverse the order of replies to match the structure
       };
       alertTicketList.push(alertTicket);
     }

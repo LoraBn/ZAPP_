@@ -93,9 +93,16 @@ const TimeRemaining = ({schedule}) => {
             closestTime = remaining;
             closestSchedule = [item];
           }
+        } else if (elapsedStart <= elapsedCur){
+          const remaining = 24 * 3600 - elapsedCur + elapsedStart;
+          if (remaining < closestTime){
+            closestTime = remaining
+            closestSchedule= [item];
+          }
         }
       }
     }
+
     for (const item of closestSchedule) {
       const startTime = new Date(item.time_to_turn_on);
 
@@ -115,6 +122,7 @@ const TimeRemaining = ({schedule}) => {
         return formatElapsedTime(remaining);
       }
     }
+    return '00 : 00 : 00'
   };
 
   function formatElapsedTime(elapsedTime) {

@@ -31,10 +31,6 @@ const GeneratorTimingItem = ({
   const [timingOnOpen, setTimingOnOpen] = useState(false);
   const [timingOffOpen, setTimingOffOpen] = useState(false);
 
-  console.log(timingOnOpen);
-
-  console.log(timingOnOpen, timingOffOpen);
-
   return (
     <>
       <Card style={styles.onOffContainer}>

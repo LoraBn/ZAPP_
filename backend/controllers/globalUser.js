@@ -37,7 +37,6 @@ const userSignIn = async (req, res) => {
     // Check if any user record exists for the given username
     if (result.rows.length === 0) {
       return res
-        .status(402)
         .json({ error_message: "Invalid username or password" });
     }
 
@@ -51,7 +50,6 @@ const userSignIn = async (req, res) => {
     );
     if (!validPassword) {
       return res
-        .status(401)
         .json({ error_message: "Invalid username or password" });
     }
 

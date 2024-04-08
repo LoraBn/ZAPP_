@@ -160,7 +160,7 @@ const getAllOpenTicketsCus = async (req, res) => {
         LEFT JOIN owners o ON sr.owner_id = o.owner_id
         LEFT JOIN customers c ON sr.customer_id = c.customer_id
         WHERE sr.ticket_id = $1
-        ORDER BY sr.created_at DESC
+        ORDER BY sr.created_at
       `;
       const repliesResult = await pool.query(repliesQuery, [ticket.ticket_id]);
       const replies = repliesResult.rows;
@@ -372,7 +372,7 @@ const createReplyCus = async (req, res) => {
 
     const queryText = `
       INSERT INTO support_tickets_replies (ticket_id, owner_id, customer_id, reply_text, issentbyowner) 
-      VALUES($1, $2, $3, $4, $5)
+      VALUES($1, $2, $3, $4, false)
       RETURNING reply_id, created_at
     `;
 
@@ -381,7 +381,6 @@ const createReplyCus = async (req, res) => {
       ownerId,
       customerId,
       replyText,
-      isSentByOwner,
     ]);
 
     if (result.rows.length > 0) {

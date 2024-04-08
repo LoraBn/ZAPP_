@@ -1,22 +1,20 @@
 import {Socket} from 'socket.io-client';
 import {create} from 'zustand';
-import { Equipment } from '../screens/owner-home-page';
-import { Plan } from '../screens/bills-nav-page';
+import {Equipment} from '../screens/owner-home-page';
+import {Plan} from '../screens/bills-nav-page';
 
 interface UseUser {
   //ANY USER DATA U WANT IF U WANT TO DO AUTH THIS WAY OR ANOTHER..
   accessToken: string | null;
-  refreshToken: string | null;
   expiresAt: number | null;
   type: 'owner' | 'customer' | 'employee' | null;
   socket: Socket | null;
   employees: string[] | null;
   plans: Plan[] | null;
   equipments: Equipment[] | ['No equipment added yet'];
-  setEquipments: (equipments: Equipment[]| ['No equipment added yet']) => void;
+  setEquipments: (equipments: Equipment[] | ['No equipment added yet']) => void;
   setPlans: (plans: Plan[] | null) => void;
   setAccessToken: (token: string) => void;
-  setRefreshToken: (token: string) => void;
   setExpiresAtToken: (expiresAt: number) => void;
   setType: (type: 'owner' | 'customer' | 'employee') => void;
   setSocket: (socket: Socket | null) => void;
@@ -27,23 +25,21 @@ interface UseUser {
 export const useUser = create<UseUser>(set => {
   return {
     accessToken: null,
-    refreshToken: null,
     expiresAt: null,
     type: null,
     socket: null,
     employees: null,
-    plans:null,
-    equipments:['No equipment added yet'],
+    plans: null,
+    equipments: ['No equipment added yet'],
     signOut() {
       set(() => {
         return {
           accessToken: null,
           expiresAt: null,
           type: null,
-          refreshToken: null,
           socket: null,
           employees: null,
-          plansNames:null,
+          plansNames: null,
         };
       });
     },
@@ -62,11 +58,6 @@ export const useUser = create<UseUser>(set => {
         return {expiresAt};
       });
     },
-    setRefreshToken(token) {
-      set(() => {
-        return {refreshToken: token};
-      });
-    },
     setSocket(socket) {
       set(() => {
         return {socket};
@@ -74,18 +65,18 @@ export const useUser = create<UseUser>(set => {
     },
     setEmployees(employees) {
       set(() => {
-        return { employees };
+        return {employees};
       });
     },
-    setPlans(plans){
-      set(()=>{
-        return {plans}
-      })
+    setPlans(plans) {
+      set(() => {
+        return {plans};
+      });
     },
-    setEquipments(equipments){
-      set(()=>{
-        return {equipments}
-      })
-    }
+    setEquipments(equipments) {
+      set(() => {
+        return {equipments};
+      });
+    },
   };
 });

@@ -5,8 +5,7 @@ const { getCustomerIdForOwner } = require("../utils/ownerUtils");
 
 const ownerSignUp = async (req, res) => {
   try {
-    const { name, lastName, userName, password } = req.body;
-    console.log("HELLO I M SIGNING UP");
+    const { name, lastName, username, password } = req.body;
 
     // Check if the username is already registered
     const userNameExists = await pool.query(
@@ -16,7 +15,6 @@ const ownerSignUp = async (req, res) => {
 
     if (userNameExists.rows.length > 0) {
       return res
-        .status(401)
         .json({ error_message: "Username already registered" });
     }
 
@@ -2121,7 +2119,7 @@ const getAllSupportTickets = async (req, res) => {
         LEFT JOIN owners o ON sr.owner_id = o.owner_id
         LEFT JOIN customers c ON sr.customer_id = c.customer_id
         WHERE sr.ticket_id = $1
-        ORDER BY sr.created_at DESC
+        ORDER BY sr.created_at
       `;
       const repliesResult = await pool.query(repliesQuery, [ticket.ticket_id]);
       const replies = repliesResult.rows;
@@ -2135,7 +2133,7 @@ const getAllSupportTickets = async (req, res) => {
         ticket_message: ticket.ticket_message,
         is_closed: ticket.is_closed,
         created_at: ticket.created_at,
-        replies: replies.reverse(), // Reverse the order of replies to match the structure
+        replies: replies, // Reverse the order of replies to match the structure
       };
       supportTicketList.push(supportTicket);
     }
@@ -2615,7 +2613,7 @@ const getAllAlertTickets = async (req, res) => {
         LEFT JOIN owners o ON ar.owner_id = o.owner_id
         LEFT JOIN employees e ON ar.employee_id = e.employee_id
         WHERE ar.alert_id = $1
-        ORDER BY ar.created_at DESC
+        ORDER BY ar.created_at
       `;
       const repliesResult = await pool.query(repliesQuery, [alert.alert_id]);
       const replies = repliesResult.rows;
@@ -2631,7 +2629,7 @@ const getAllAlertTickets = async (req, res) => {
         is_closed: alert.is_closed,
         created_at: alert.created_at,
         created_by: alert.created_by,
-        replies: replies.reverse(), // Reverse the order of replies to match the structure
+        replies: replies, // Reverse the order of replies to match the structure
       };
       alertTicketList.push(alertTicket);
     }

@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 15,
   },
-  text: {color: Colors.Black, fontWeight: '700', fontSize: 16},
+  text: {color: Colors.Black, fontWeight: '700', fontSize: 16, maxWidth: "90%"},
   exclamationMark: {
     position: 'absolute',
     zIndex: 25,

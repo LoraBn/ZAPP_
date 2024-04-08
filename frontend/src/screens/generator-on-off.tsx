@@ -31,14 +31,20 @@ const GeneratorOnOff = () => {
 
   const editPrice = async (price: string) => {
     try {
-      const responce = await client.put(`/${type}/price`, { kwh_price: price }, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
+      const responce = await client.put(
+        `/${type}/price`,
+        {kwh_price: price},
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
         },
-      });
-      if(responce){
+      );
+      if (responce) {
         setValue('kw_price', price);
       }
+
+      return responce;
     } catch (error) {
       console.log('Error updating price:', error);
     }
@@ -56,8 +62,6 @@ const GeneratorOnOff = () => {
       console.log(error);
     }
   };
-
-
 
   const fetchSchdule = async () => {
     try {
@@ -88,7 +92,6 @@ const GeneratorOnOff = () => {
     setIsEditing(false);
 
     const responce2 = await editPrice(data.kw_price);
-    
 
     const responce = await client.put(`${type}/electric-schedule`, data, {
       headers: {
@@ -96,22 +99,14 @@ const GeneratorOnOff = () => {
       },
     });
 
-    console.log(responce.data.message);
+    if (responce) {
+      console.log(responce.data.message);
+    }
   }
-  const handleDelete = async (index: number) => {
+  const handleDelete = (index: number) => {
     const newArray = [...field.value];
     newArray.splice(index, 1);
     field.onChange(newArray);
-
-    try {
-      await client.put(`${type}/electric-schedule`, { schedule: newArray }, {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
-    } catch (error) {
-      console.log('Error updating schedule:', error);
-    }
   };
 
   return (
@@ -132,7 +127,9 @@ const GeneratorOnOff = () => {
                   keyboardType="decimal-pad"
                 />
               ) : (
-                <Text style={styles.text}>{getValues().kw_price || 'No Price'}</Text>
+                <Text style={styles.text}>
+                  {getValues().kw_price || 'No Price'}
+                </Text>
               )}
             </View>
             <ScreenHeader>Timing on/off</ScreenHeader>
@@ -163,7 +160,7 @@ const GeneratorOnOff = () => {
             {...props}
             field={field}
             disabled={!isEditing}
-            onDeletePress={() => handleDelete(props.index)} 
+            onDeletePress={() => handleDelete(props.index)}
             isEditing={isEditing}
           />
         )}

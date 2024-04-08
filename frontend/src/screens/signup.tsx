@@ -1,13 +1,13 @@
-import {Alert, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
-import React, { useEffect } from 'react';
-import {Colors} from '../utils/colors';
-import {ImageStrings} from '../assets/image-strings';
-import {useForm} from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Colors } from '../utils/colors';
+import { ImageStrings } from '../assets/image-strings';
+import { useForm } from 'react-hook-form';
 import AuthTextInput from '../components/ui/auth-text-input';
 import ElevatedCard from '../components/ui/elevated-card';
-import {StackScreenProps} from '@react-navigation/stack';
-import {AuthStackParams} from '../navigation/auth-stack-navigation';
-import {useUser} from '../storage/use-user';
+import { StackScreenProps } from '@react-navigation/stack';
+import { AuthStackParams } from '../navigation/auth-stack-navigation';
+import { useUser } from '../storage/use-user';
 import dayjs from 'dayjs';
 import client from '../API/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,12 +22,8 @@ type SignUpForm = {
 
 type SignUpProps = StackScreenProps<AuthStackParams, 'Signup'>;
 
-const SignUp = ({navigation}: SignUpProps) => {
-
-
-  const {setAccessToken, setExpiresAtToken, setRefreshToken, setType} = useUser(
-    state => state,
-  );
+const SignUp = ({ navigation }: SignUpProps) => {
+  const { setAccessToken, setExpiresAtToken, setType } = useUser(state => state);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +38,6 @@ const SignUp = ({navigation}: SignUpProps) => {
             },
           });
           if (response.data.success) {
-            console.log(userType)
             setType(userType);
             setAccessToken(token);
           }
@@ -54,7 +49,9 @@ const SignUp = ({navigation}: SignUpProps) => {
     fetchData();
   }, []);
 
-  const {control, handleSubmit} = useForm<SignUpForm>({
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const { control, handleSubmit } = useForm<SignUpForm>({
     defaultValues: {
       password: '',
       username: '',
@@ -72,33 +69,49 @@ const SignUp = ({navigation}: SignUpProps) => {
     name,
   }: SignUpForm) => {
     try {
+      if (password.length < 6) {
+        Alert.alert('Passwords should be at least 6 characters');
+        return;
+      }
+
       if (password !== confirmPassword) {
         Alert.alert('Passwords must match');
         return;
       }
-      const response = await client.post('/owner/signup', {
-        name,
-        lastName,
-        userName: username,
-        password,
-      });
+
+      setLoading(true);
+
+      const reqBody = {
+        name: name.trim(),
+        lastName: lastName.trim(),
+        username: username.trim(),
+        password: password.trim(),
+      };
+
+      const response = await client.post('/owner/signup', reqBody);
 
       if (response.data.userId) {
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('userType', 'Owner');
+        await AsyncStorage.setItem('userType', 'owner');
         setAccessToken(response.data.token);
-        setRefreshToken('MockTokenRefresh');
-        setExpiresAtToken(dayjs().unix()); // No need to pass new Date() to dayjs() as it defaults to current date and time
+        setExpiresAtToken(dayjs().unix());
         setType('owner');
+      } else {
+        setLoading(false)
+        Alert.alert(response.data.error_message || 'Sign up failed');
       }
     } catch (error) {
       console.log(error);
-      Alert.alert('An error occurred'); // Handle error gracefully
+      Alert.alert('An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <ScrollView style={styles.screen}>
-      <Image source={{uri: ImageStrings.AuthLogo, height: 300, width: 300}} />
+      <Image source={{ uri: ImageStrings.AuthLogo, height: 300, width: 300 }} />
+      {loading && <ActivityIndicator size="large" color={Colors.Blue} />}
       <View style={styles.authFormContainer}>
         <Text style={styles.zappText}>Zapp</Text>
         <AuthTextInput
@@ -134,7 +147,7 @@ const SignUp = ({navigation}: SignUpProps) => {
           secureTextEntry
         />
         <Text style={styles.noteText}>
-          Note: You Will SignUp As An Owner.
+          Note: You will sign up as an owner.
         </Text>
         <ElevatedCard
           onPress={handleSubmit(onSubmit)}
@@ -144,9 +157,9 @@ const SignUp = ({navigation}: SignUpProps) => {
           Sign Up
         </ElevatedCard>
         <View style={styles.orContainer}>
-          <View style={styles.orSeperator} />
+          <View style={styles.orSeparator} />
           <Text style={styles.orText}>Or</Text>
-          <View style={styles.orSeperator} />
+          <View style={styles.orSeparator} />
         </View>
         <Text style={styles.dontHaveAnAccountText}>
           Already have an account?
@@ -161,7 +174,7 @@ const SignUp = ({navigation}: SignUpProps) => {
       </View>
       <Image
         style={styles.zappLogoContainer}
-        source={{uri: ImageStrings.ZappLogo, height: 100, width: 100}}
+        source={{ uri: ImageStrings.ZappLogo, height: 100, width: 100 }}
       />
     </ScrollView>
   );
@@ -170,13 +183,9 @@ const SignUp = ({navigation}: SignUpProps) => {
 export default SignUp;
 
 const styles = StyleSheet.create({
-  noteText: {color: Colors.Black, fontWeight: '600', textAlign: 'center'},
-  dontHaveAnAccountText: {
-    color: Colors.Black,
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  orSeperator: {
+  noteText: { color: Colors.Black, fontWeight: '600', textAlign: 'center' },
+  dontHaveAnAccountText: { color: Colors.Black, textAlign: 'center', fontSize: 12 },
+  orSeparator: {
     width: 10,
     flex: 1,
     borderBottomWidth: 1,
@@ -188,19 +197,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  orText: {marginHorizontal: 15},
+  orText: { marginHorizontal: 15 },
   elevatedCardInnerContainer: {
     backgroundColor: Colors.White,
     borderWidth: 1,
     borderColor: Colors.Blue,
   },
-  elevatedCardTextStyle: {color: Colors.Black, fontSize: 22, fontWeight: '700'},
-  elevatedCardStyle: {alignSelf: 'center', backgroundColor: Colors.Blue},
-  screen: {
-    backgroundColor: Colors.Background,
-    flex: 1,
-    paddingHorizontal: 25,
-  },
+  elevatedCardTextStyle: { color: Colors.Black, fontSize: 22, fontWeight: '700' },
+  elevatedCardStyle: { alignSelf: 'center', backgroundColor: Colors.Blue },
+  screen: { backgroundColor: Colors.Background, flex: 1, paddingHorizontal: 25 },
   zappText: {
     fontWeight: '700',
     color: Colors.Black,
@@ -216,10 +221,5 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 25,
   },
-  authFormContainerStyle: {
-    gap: 25,
-  },
-  zappLogoContainer: {
-    alignSelf: 'flex-end',
-  },
+  zappLogoContainer: { alignSelf: 'flex-end' },
 });
