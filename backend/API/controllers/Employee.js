@@ -1,7 +1,7 @@
 const pool = require("../db");
 const { generateEmployeeToken } = require("../utils/JWT");
 const bcrypt = require("bcrypt");
-const io = require("../server");
+const io = require("..");
 const { getCustomerIdForOwner } = require("../utils/ownerUtils");
 
 const updateProfile = async (req, res) => {

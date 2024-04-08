@@ -10,7 +10,6 @@ const {
   createBillEmp,
   updateBillEmp,
   deleteCustomerEmp,
-  getAllOpenAlertsEmp,
   getAlertTicketEmp,
   createAlertReplyEmp,
   getAllAlertRepliesEmp,
@@ -55,7 +54,7 @@ router.delete(
   deleteCustomerEmp
 );
 
-router.get('/salary', authenticateEmployeeToken, getSalary)
+router.get("/salary", authenticateEmployeeToken, getSalary);
 
 //bills
 router.get("/bills", authenticateEmployeeToken, getAllBillsEmp);
@@ -90,7 +89,6 @@ router.get("/issues", authenticateEmployeeToken, getAllOpenAlertTickets);
 router.get("/issues/:id", authenticateEmployeeToken, getAlertTicketEmp);
 router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
 router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
-
 
 router.get(
   "/assigned-issues",
