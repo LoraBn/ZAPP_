@@ -156,6 +156,10 @@ const EmployeeDetailsScreen = ({
       socket.on('deleteExpense', (data: any) => {
         setRefresh(prev => !prev);
       });
+
+      socket.on('employeeUpdate', (data)=>{
+        setRefresh(prev => !prev)
+      })
     }
   };
 
@@ -212,7 +216,7 @@ const EmployeeDetailsScreen = ({
               return (
                 <View style={styles.flatlistArrayContainer}>
                   {item.map((it, idx) => (
-                    <AssignmentItem key={it.id} item={it} index={idx} />
+                    <AssignmentItem key={it.alert_id} item={it} index={idx} />
                   ))}
                 </View>
               );

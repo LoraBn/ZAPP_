@@ -182,6 +182,10 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       setIssues(prev => [data, ...prev]);
     });
 
+    newSocket.on('employeeUpdate', (data)=>{
+      setRefresh(prev => !prev)
+    })
+
     
     newSocket?.on('newPlan', (data: any) => {
       setRefresh(prev => !prev);

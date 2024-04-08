@@ -263,6 +263,10 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     newSocket?.on('deletePlan', (data: any) => {
       setRefresh(prev => !prev);
     });
+
+    newSocket?.on('employeeUpdate', (data)=>{
+      setRefresh(prev => !prev)
+    })
   };
 
   return (
