@@ -8,7 +8,7 @@ const updateProfileCustomer = async (req, res) => {
     const ownerId = req.user.ownerId;
     const { username, password } = req.body;
 
-    // Check if the employee exists
+    // Check if the customer exists
     const customerExists = await pool.query(
       "SELECT * FROM customers WHERE customer_id = $1",
       [customerId]
@@ -21,6 +21,18 @@ const updateProfileCustomer = async (req, res) => {
     }
 
     const existingCustomer = customerExists.rows[0];
+
+    // Check if the new username already exists in the database
+    const usernameExists = await pool.query(
+      "SELECT * FROM customers WHERE username = $1 AND customer_id != $2",
+      [username, customerId]
+    );
+
+    if (usernameExists.rows.length > 0) {
+      return res
+        .status(207)
+        .json({ error_message: "Username already exists" });
+    }
 
     const updatedUserName = username || existingCustomer.username;
     const updatedPassword = password
@@ -53,12 +65,13 @@ const updateProfileCustomer = async (req, res) => {
 
     return res
       .status(404)
-      .json({ error_message: "No customer found with ID: " + employeeId });
+      .json({ error_message: "No customer found with ID: " + customerId });
   } catch (error) {
     console.error("Error updating customer:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getElectricScheduleCus = async (req, res) => {
   try {

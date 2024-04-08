@@ -24,6 +24,18 @@ const updateProfile = async (req, res) => {
 
     const existingEmployee = employeeExists.rows[0];
 
+    // Check if the new username already exists in the database
+    const usernameExists = await pool.query(
+      "SELECT * FROM employees WHERE username = $1 AND employee_id != $2",
+      [username, employeeId]
+    );
+
+    if (usernameExists.rows.length > 0) {
+      return res
+        .status(207)
+        .json({ error_message: "Username already exists" });
+    }
+
     const updatedUserName = username || existingEmployee.username;
     const updatedPassword = password
       ? await bcrypt.hash(password, 10)
@@ -61,6 +73,7 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
+
 
 const getCustomerListEmployee = async (req, res) => {
   try {

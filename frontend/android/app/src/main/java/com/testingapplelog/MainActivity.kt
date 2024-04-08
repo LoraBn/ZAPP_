@@ -1,4 +1,4 @@
-package com.testingapplelog
+package com.zapp
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -18,7 +18,7 @@ class MainActivity : ReactActivity() {
     super.onCreate(null)
   }
 
-  override fun getMainComponentName(): String = "testingapplelog"
+  override fun getMainComponentName(): String = "zapp"
 
   /**
    * Returns the instance of the [ReactActivityDelegate]. We use [DefaultReactActivityDelegate]

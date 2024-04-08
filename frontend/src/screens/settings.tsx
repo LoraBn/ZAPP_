@@ -22,27 +22,45 @@ const Settings = () => {
   });
 
   async function onSubmit(data: SettingsForm) {
-    console.log(type);
-    try {
-      const response =  await client.put(`${type}/profile`, data, {
-        headers: {
-          authorization: `Bearer ${accessToken}`
+    Alert.alert(
+      'Are you sure?',
+      'Press OK to confirm or Cancel to abort',
+      [
+        {
+          text: 'OK',
+          onPress: async () => {
+            try {
+              const response = await client.put(`${type}/profile`, data, {
+                headers: {
+                  authorization: `Bearer ${accessToken}`
+                }
+              })
+              if (response.status === 207) {
+                Alert.alert('Failed', response.data.error_message);
+                return;
+              }
+
+              if (response.data.token) {
+                setAccessToken(response.data.token);
+                await AsyncStorage.removeItem('token');
+                await AsyncStorage.setItem('token', response.data.token);
+                Alert.alert(response.data.message);
+                return;
+              }
+            } catch (error) {
+              console.log(error);
+              return;
+            }
+          }
+        },
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel'
         }
-      })
-
-      if(response.data.token){
-        setAccessToken(response.data.token);
-        await AsyncStorage.removeItem('token');
-
-        await AsyncStorage.setItem('token', response.data.token)
-
-        Alert.alert(response.data.message)
-      }
-
-      
-    } catch (error) {
-      console.log(error)
-    }
+      ],
+      { cancelable: false }
+    );
   }
 
   async function signingOut() {
