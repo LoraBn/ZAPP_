@@ -11,8 +11,6 @@ type BillListItemProps = {
 
 const BillListItem = ({item}: BillListItemProps) => {
   const [isVisible, setIsVisible] = useState(false);
-
-  // Item should come from api with prefetched data etc...
   return (
     <Pressable
       style={styles.container}

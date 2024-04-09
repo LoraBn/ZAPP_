@@ -57,9 +57,14 @@ const GeneratorOnOff = () => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setValue('kw_price', `${response.data.price.kwh_price}`);
+      if (response && response.data) {
+        setValue('kw_price', `${response.data.price.kwh_price}`);
+      } else {
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -79,8 +84,12 @@ const GeneratorOnOff = () => {
           setValue('schedule', [...scheduleArray]);
         }
       }
+      else{
+        return
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 

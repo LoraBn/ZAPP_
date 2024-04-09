@@ -66,9 +66,14 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setPrice(response.data.price);
+      if (response && response.data) {
+        setPrice(response.data.price);
+      } else {
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -81,10 +86,15 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response) {
+      if (response && response.data) {
         setRemaining(response.data.remaining_amount);
+      } else {
+        return;
       }
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+      return;
+    }
   };
 
   const [scheduleData, setScheduleData] = useState<any[]>([]);
@@ -100,9 +110,12 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
       console.log(response.data.schedule);
       if (response.data.schedule.length > 0) {
         setScheduleData(response.data.schedule);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -113,9 +126,14 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setAnnouncements(response.data.announcements.reverse());
+      if (response && response.data) {
+        setAnnouncements(response.data.announcements);
+      } else {
+        return;
+      }
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return;
     }
   };
 
@@ -135,8 +153,8 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
         setRefresh(prev => !prev);
       });
 
-      newSocket.on('newPrice', (data)=>{
-        setRefresh(prev => !prev)
+      newSocket.on('newPrice', data => {
+        setRefresh(prev => !prev);
       });
     }
   };
@@ -157,10 +175,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           Pending
         </Text>
         <WhiteCard
-          style={[
-            styles.amountContainer,
-            {backgroundColor: Colors.White},
-          ]}>
+          style={[styles.amountContainer, {backgroundColor: Colors.White}]}>
           <Text style={styles.amountText}>$ {remaining || 0}</Text>
         </WhiteCard>
       </View>

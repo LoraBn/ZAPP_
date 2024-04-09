@@ -27,8 +27,8 @@ import CarouselIndicators from '../components/ui/carousel-indicators';
 import AssignmentItem from '../components/ui/assignment-item';
 import client from '../API/client';
 import {useUser} from '../storage/use-user';
-import { io } from 'socket.io-client';
-import { ioString } from '../API/io';
+import {io} from 'socket.io-client';
+import {ioString} from '../API/io';
 
 type EmployeeDetailsScreenProps = StackScreenProps<
   UsersStackNavigationParams,
@@ -48,7 +48,6 @@ export type Assignment = {
   status: 'Done' | 'Not Done';
   date: Date;
 };
-
 
 export const chunkArray = (arr: any[], chunkSize: number) => {
   const chunks = [];
@@ -93,49 +92,58 @@ const EmployeeDetailsScreen = ({
           },
         },
       );
-      if (response.data) {
+      if (response && response.data) {
         const expenses = response.data.expenses;
         // Split expenses into chunks of 4 objects each
         const chunkedExpenses = chunkArray(expenses, 4);
         setExpenses(chunkedExpenses);
-      }
-      else{
-        setExpenses([[{amount: 'No expenses found'}]])
+      } else {
+        setExpenses([[{amount: 'No expenses found'}]]);
       }
     } catch (error: any) {
-      setExpenses([[{amount: 'No expenses found'}]])
+      setExpenses([[{amount: 'No expenses found'}]]);
       console.log(error);
     }
   };
 
   const [assignedAlerts, setAssignedAlerts] = useState<Alert[]>();
 
-
   const fetchAssignedAlerts = async () => {
     try {
-      const response = client.get(`/${type}/assigned-issues/${employee.employee_id}`, {
-        headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
+      const response = client.get(
+        `/${type}/assigned-issues/${employee.employee_id}`,
+        {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
 
-      if((await response).data){
-        const chunkedAlerts = chunkArray(await (await response).data.assigned_alerts, 4);
-        setAssignedAlerts(chunkedAlerts)
+      if ((await response).data) {
+        const chunkedAlerts = chunkArray(
+          await (
+            await response
+          ).data.assigned_alerts,
+          4,
+        );
+        setAssignedAlerts(chunkedAlerts);
+      } else {
+        return;
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
+      return;
     }
-  }
+  };
 
-  const [refresh, setRefresh] = useState<boolean>(false)
-
-  useEffect(()=>{
-    establishWebSocketConnection()
-  })
+  const [refresh, setRefresh] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchAssignedAlerts()
+    establishWebSocketConnection();
+  });
+
+  useEffect(() => {
+    fetchAssignedAlerts();
     fetchExpenses();
   }, [refresh]);
 
@@ -157,9 +165,9 @@ const EmployeeDetailsScreen = ({
         setRefresh(prev => !prev);
       });
 
-      socket.on('employeeUpdate', (data)=>{
-        setRefresh(prev => !prev)
-      })
+      socket.on('employeeUpdate', data => {
+        setRefresh(prev => !prev);
+      });
     }
   };
 
@@ -193,7 +201,9 @@ const EmployeeDetailsScreen = ({
         </View>
         <View style={styles.accountsUserNameContainer}>
           {/* Change these from API and the user */}
-          <Text style={styles.text}>{employee.name} {employee.last_name}</Text>
+          <Text style={styles.text}>
+            {employee.name} {employee.last_name}
+          </Text>
         </View>
         <View style={styles.accountsUserNameContainer}>
           <Text style={styles.text}>Salary: ${employee.salary}</Text>

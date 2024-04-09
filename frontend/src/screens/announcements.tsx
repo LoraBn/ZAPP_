@@ -45,9 +45,11 @@ const Announcements = ({navigation}: AnnouncementsProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setAnnouncements(response.data.announcements.reverse());
+      if(response && response.data)
+        {setAnnouncements(response.data.announcements);}
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return
     }
   };
 

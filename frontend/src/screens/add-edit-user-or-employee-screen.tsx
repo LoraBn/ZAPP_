@@ -52,8 +52,6 @@ const AddEditUserOrEmployeeScreen = ({
   const {control, watch, handleSubmit, setValue, getValues} =
     useForm<AddUserOrEmployeeForm>({
       defaultValues: {
-        // PREFILL THESE AS YOU FETCH FROM YOUR API :)
-        // THESE SHOULD CHANGE WHEN YOU INTEGRATE FROM YOUR APIS
         lastName: '',
         password: '',
         username: '',

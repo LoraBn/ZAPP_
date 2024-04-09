@@ -657,7 +657,8 @@ const getAnnouncements = async (req, res) => {
       SELECT a.*, o.username as owner_username
       FROM announcements a
       LEFT JOIN owners o ON a.owner_id = o.owner_id
-      WHERE a.owner_id = $1`;
+      WHERE a.owner_id = $1
+      ORDER BY a.announcement_date DESC`;
 
     const announcementsResult = await pool.query(queryText, [ownerId]);
 

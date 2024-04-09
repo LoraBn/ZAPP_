@@ -48,12 +48,15 @@ const BillingHistory = () => {
         },
       });
 
-      if (responce) {
+      if (responce && responce.data) {
         setBills(responce.data.bills);
         calculateBillsAverage(responce.data.bills);
+      } else {
+        return
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 

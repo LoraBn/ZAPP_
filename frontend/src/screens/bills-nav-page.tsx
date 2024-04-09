@@ -66,10 +66,15 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setPlans(responce.data.plans.reverse());
+      if (responce && responce.data) {
+        setPlans(responce.data.plans.reverse());
+      } else {
+        return;
+      }
     } catch (error: any) {
       Alert.alert(error.message);
       console.log(error);
+      return;
     }
   };
 
@@ -81,9 +86,14 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setEquipments(response.data.equipments.reverse());
+      if (response && response.data) {
+        setEquipments(response.data.equipments.reverse());
+      } else {
+        return;
+      }
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return;
     }
   };
 
@@ -95,8 +105,15 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setExpenses(responce.data.expenses.reverse());
-    } catch (error) {}
+      if (responce && responce.data) {
+        setExpenses(responce.data.expenses.reverse());
+      } else {
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+      return;
+    }
   };
 
   const [bills, setBills] = useState<any>([]);
@@ -109,11 +126,14 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         },
       });
 
-      if (responce) {
+      if (responce && responce.data) {
         setBills(responce.data.bills);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -121,15 +141,14 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
     fetchAllBills();
     fetchEquipments();
     fetchExpense();
-    fetchPlans(), 
-    establishWebSocketConnection();
+    fetchPlans(), establishWebSocketConnection();
   }, []);
 
-  const [refresh, setRefresh]= useState<boolean>(false)
+  const [refresh, setRefresh] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchProfit()
-    fetchPrice()
+    fetchProfit();
+    fetchPrice();
   }, [refresh]);
 
   const [kwhPrice, setKwhPrice] = useState<string>('No Price');
@@ -141,9 +160,14 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setKwhPrice(`${response.data.price.kwh_price}`);
+      if (response && response.data) {
+        setKwhPrice(`${response.data.price.kwh_price}`);
+      } else {
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -155,11 +179,14 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce) {
+      if (responce && responce.data) {
         setProfit(parseInt(responce.data.profit));
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -235,7 +262,6 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         });
         setRefresh(prev => !prev);
       });
-       
 
       //bills
       socket.on('newBill', data => {
@@ -251,7 +277,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         {paddingTop: insets.top + 15},
       ]}
       style={styles.screen}>
-      <OwnerHeader kwhPrice={kwhPrice || 'No price'} profit={profit || "0"}/>
+      <OwnerHeader kwhPrice={kwhPrice || 'No price'} profit={profit || '0'} />
       <View>
         <View style={styles.alertTitleContainer}>
           <Text style={styles.alertTitle}>Subscription Plans</Text>
@@ -307,7 +333,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={bills.slice(0,3)}
+              data={bills.slice(0, 3)}
               scrollEnabled={false}
               renderItem={BillsItem}
               ListFooterComponent={() =>

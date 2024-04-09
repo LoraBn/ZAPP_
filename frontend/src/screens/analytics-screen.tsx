@@ -57,8 +57,8 @@ const AnalyticsScreen = () => {
   const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
 
   useEffect(() => {
-    fetchAnalytics();
     fetchSchedule();
+    fetchAnalytics();
   }, []);
 
   const fetchAnalytics = async () => {
@@ -75,8 +75,12 @@ const AnalyticsScreen = () => {
       if (response && response.data) {
         setAnalyticsData(response.data);
       }
+      else{
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return
     }
   };
 
@@ -94,8 +98,12 @@ const AnalyticsScreen = () => {
       if (response && response.data) {
         setScheduleData(response.data);
       }
+      else {
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 

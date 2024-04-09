@@ -31,8 +31,15 @@ const Expenses = ({}: ExpensesProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setExpenses(responce.data.expenses.reverse());
-    } catch (error) {}
+      if (responce && responce.data) {
+        setExpenses(responce.data.expenses.reverse());
+      } else {
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+      return;
+    }
   };
 
   useEffect(() => {
@@ -52,9 +59,16 @@ const Expenses = ({}: ExpensesProps) => {
         setExpenses(prevExpenses => [data, ...prevExpenses]);
       });
       socket.on('updateExpense', (data: any) => {
-        console.log('updating')
-        const {oldId, expense_id ,username, amount, description, expense_date} = data;
-        const newExpense = {expense_id,username, amount, description, expense_date};
+        console.log('updating');
+        const {oldId, expense_id, username, amount, description, expense_date} =
+          data;
+        const newExpense = {
+          expense_id,
+          username,
+          amount,
+          description,
+          expense_date,
+        };
         setExpenses(prevExpenses => {
           const filtered = prevExpenses.filter(
             item => item.expense_id != oldId,
@@ -63,9 +77,11 @@ const Expenses = ({}: ExpensesProps) => {
         });
       });
       socket.on('deleteExpense', (data: any) => {
-        const { deletedId } = data;
+        const {deletedId} = data;
         setExpenses(prevExpenses => {
-          const updatedExpenses = prevExpenses.filter(item => item.expense_id != deletedId);
+          const updatedExpenses = prevExpenses.filter(
+            item => item.expense_id != deletedId,
+          );
           return updatedExpenses;
         });
       });

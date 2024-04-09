@@ -62,12 +62,17 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     try {
       const response = await client.get(`/${type}/announcements`, {
         headers: {
-          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+          authorization: `Bearer ${accessToken}`,
         },
       });
-      setAnnouncements(response.data.announcements.reverse());
+      if (response && response.data) {
+        setAnnouncements(response.data.announcements);
+      } else {
+        return;
+      }
     } catch (error: any) {
-      console.log(error.data?.error_message)
+      console.log(error.data?.error_message);
+      return;
     }
   };
 
@@ -78,10 +83,14 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      // const PlansArray = responce.data.plans.map((plan: any) => plan.plan_name);
-      setPlans(responce.data.plans);
+      if (responce && responce.data) {
+        setPlans(responce.data.plans);
+      } else {
+        return;
+      }
     } catch (error: any) {
       console.log(error);
+      return;
     }
   };
 
@@ -93,11 +102,14 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce) {
+      if (responce && responce.data) {
         setIssues(responce.data.alert_ticket_list);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -105,19 +117,22 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
 
   const fetchSalary = async () => {
     try {
-      const response = await client.get(`/${type}/salary`,{
+      const response = await client.get(`/${type}/salary`, {
         headers: {
-          authorization: `Bearer ${accessToken}`
-        }
-      })
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-      if(response?.data.salary){
-        setSalary(response.data.salary)
+      if (response?.data.salary) {
+        setSalary(response.data.salary);
+      } else {
+        return;
       }
     } catch (error: any) {
-      console.log(error.data?.error_message)
+      console.log(error.data?.error_message);
+      return;
     }
-  }
+  };
 
   const fetchEquipments = async () => {
     try {
@@ -126,9 +141,14 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      setEquipments(response.data.equipments.reverse());
+      if (response && response) {
+        setEquipments(response.data.equipments.reverse());
+      } else {
+        return;
+      }
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return;
     }
   };
 
@@ -142,7 +162,6 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
         },
       });
 
-      console.log(response.data.schedule);
       if (response.data.schedule.length > 0) {
         setScheduleData(response.data.schedule);
       }
@@ -160,9 +179,14 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setPrice(response.data.price);
+      if (response && response.data) {
+        setPrice(response.data.price);
+      } else {
+        return
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -182,11 +206,10 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
       setIssues(prev => [data, ...prev]);
     });
 
-    newSocket.on('employeeUpdate', (data)=>{
-      setRefresh(prev => !prev)
-    })
+    newSocket.on('employeeUpdate', data => {
+      setRefresh(prev => !prev);
+    });
 
-    
     newSocket?.on('newPlan', (data: any) => {
       setRefresh(prev => !prev);
     });
@@ -196,7 +219,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     newSocket?.on('deletePlan', (data: any) => {
       setRefresh(prev => !prev);
     });
-    
+
     newSocket?.on('newEquipment', (data: any) => {
       setRefresh(prev => !prev);
     });
@@ -206,7 +229,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
     newSocket?.on('deleteEquipment', (data: any) => {
       setRefresh(prev => !prev);
     });
-    
+
     newSocket?.on('ScheduleUpdate', (data: any) => {
       setRefresh(prev => !prev);
     });
