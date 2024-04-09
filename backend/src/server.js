@@ -26,6 +26,10 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
 const OwnerRoutes = require("./Routes/ownerRoutes");
 const globalRoutes = require("./Routes/globalRoutes");
 const employeeRoutes = require("./Routes/employeeRoutes");
@@ -35,3 +39,5 @@ app.use("/api/", globalRoutes);
 app.use("/api/owner", OwnerRoutes);
 app.use("/api/employee", employeeRoutes);
 app.use("/api/customer", customerRoutes);
+
+module.exports = app;
