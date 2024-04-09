@@ -1,1 +1,1 @@
-export const ioString = 'https://zapp-api-c9ys.onrender.com:443';
+export const ioString = 'http://192.168.0.107:3000';

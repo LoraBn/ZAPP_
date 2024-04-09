@@ -15,7 +15,7 @@ const server = app.listen(Port, () => {
   console.log("Server is listening on port:", Port);
 });
 
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { cors: { origin: ":*:" } });
 app.set("io", io);
 
 io.on("connection", (socket) => {
