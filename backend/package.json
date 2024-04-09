@@ -2,10 +2,10 @@
   "name": "zapp-third-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./src/server.js",
   "scripts": {
-    "start": "node ./API/index.js",
-    "dev": "nodemon ./API/index.js"
+    "start": "node ./API/server.js",
+    "dev": "nodemon ./API/server.js"
   },
   "keywords": [],
   "author": "",
