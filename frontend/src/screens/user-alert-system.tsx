@@ -100,9 +100,12 @@ const UserAlertSystem = () => {
           const alertTicketList: ALERT[] = response.data.alert_ticket_list;
           const formattedSections = formatAlertsForSectionList(alertTicketList);
           setSections(formattedSections);
+        } else {
+          return;
         }
       } catch (error: any) {
         console.log(error.message);
+        return;
       }
     }
   };
@@ -121,8 +124,12 @@ const UserAlertSystem = () => {
           const formattedSections = formatAlertsForSectionList(alertTicketList);
           setSections2(formattedSections);
         }
+        else{
+          return;
+        }
       } catch (error) {
         console.log(error);
+        return;
       }
     }
   };

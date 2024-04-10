@@ -151,10 +151,12 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       });
       if (response && response.data) {
         setIsBilling(!!response.data.cycleId);
+      } else {
+        return;
       }
     } catch (error) {
       console.error(error);
-      // Handle error appropriately, maybe show an alert or set a default value for isBilling
+      return;
     }
   };
 
@@ -175,10 +177,13 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
       if (response && response.data) {
         setIsBilling(prev => !prev);
         Alert.alert(response.data.message);
+      } else {
+        return;
       }
     } catch (error) {
       console.error(error);
-      Alert.alert(response?.data?.message);
+      Alert.alert(error?.data?.message);
+      return;
     }
   };
 

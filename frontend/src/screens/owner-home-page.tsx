@@ -62,12 +62,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce) {
+      if (responce && responce.data.profit) {
         setProfit(parseInt(responce.data.profit));
-        console.log(profit);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -77,18 +79,22 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     try {
       const response = await client.get(`/${type}/equipments`, {
         headers: {
-          authorization: `Bearer ${accessToken}`, // Replace with your actual token
+          authorization: `Bearer ${accessToken}`,
         },
       });
-      setEquipments(response.data.equipments.reverse());
+      if (response && response.data.equipments) {
+        setEquipments(response.data.equipments.reverse());
+      } else {
+        return;
+      }
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return;
     }
   };
 
   //Announcements
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  // const [socket, setSocket] = useState<any>(null);
   const {
     setSocket,
     socket,
@@ -120,7 +126,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
     fetchProfit();
     fetchPrice();
     fetchPlans();
-    fetchEquipments()
+    fetchEquipments();
   }, [refresh]);
 
   const fetchPlans = async () => {
@@ -131,9 +137,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
         },
       });
       // const PlansArray = responce.data.plans.map((plan: any) => plan.plan_name);
-      setPlans(responce.data.plans);
+      if (responce && responce.data.plans) {
+        setPlans(responce.data.plans);
+      } else {
+        return;
+      }
     } catch (error: any) {
       console.log(error);
+      return;
     }
   };
 
@@ -145,11 +156,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce) {
+      if (responce && responce.data.alert_ticket_list) {
         setIssues(responce.data.alert_ticket_list);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -162,11 +176,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
         },
       });
 
-      if (response) {
+      if (response && response.data.support_ticket_list) {
         setTickets(response.data.support_ticket_list);
+      } else {
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -177,9 +194,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setAnnouncements(response.data.announcements.reverse());
+      if (response && response.data.announcements) {
+        setAnnouncements(response.data.announcements);
+      } else {
+        return;
+      }
     } catch (error) {
       console.error('Error fetching announcements:', error);
+      return;
     }
   };
 
@@ -190,12 +212,18 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      const employeesArray = response.data.employees.map(
-        (employee: any) => employee.username,
-      );
-      setEmployees(employeesArray);
+
+      if (response && response.data) {
+        const employeesArray = response.data.employees.map(
+          (employee: any) => employee.username,
+        );
+        setEmployees(employeesArray);
+      } else {
+        return;
+      }
     } catch (error: any) {
       console.log(error.message);
+      return;
     }
   };
 
@@ -208,9 +236,14 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      setKwhPrice(`${response.data.price.kwh_price}`);
+      if (response && response.data.price) {
+        setKwhPrice(`${response.data.price.kwh_price}`);
+      } else {
+        return;
+      }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -264,9 +297,9 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
       setRefresh(prev => !prev);
     });
 
-    newSocket?.on('employeeUpdate', (data)=>{
-      setRefresh(prev => !prev)
-    })
+    newSocket?.on('employeeUpdate', data => {
+      setRefresh(prev => !prev);
+    });
   };
 
   return (
@@ -374,7 +407,11 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
           <WhiteCard variant="secondary">
             <FlatList
               contentContainerStyle={styles.flatlistContainer}
-              data={announcements.length? announcements.slice(0, 3) : [{owner_username: "No Announcement"}]}
+              data={
+                announcements.length
+                  ? announcements.slice(0, 3)
+                  : [{owner_username: 'No Announcement'}]
+              }
               scrollEnabled={false}
               renderItem={AnnouncementItem}
               ListFooterComponent={() =>

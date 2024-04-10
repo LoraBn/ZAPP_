@@ -102,7 +102,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce && responce.data) {
+      if (responce && responce.data.alert_ticket_list) {
         setIssues(responce.data.alert_ticket_list);
       } else {
         return;
@@ -123,7 +123,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
         },
       });
 
-      if (response?.data.salary) {
+      if (response && response?.data.salary) {
         setSalary(response.data.salary);
       } else {
         return;
@@ -141,7 +141,7 @@ const EmployeeHomeScreen = ({navigation}: EmployeeHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      if (response && response) {
+      if (response && response.data.equipments) {
         setEquipments(response.data.equipments.reverse());
       } else {
         return;

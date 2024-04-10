@@ -66,7 +66,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response && response.data) {
+      if (response && response.data.price) {
         setPrice(response.data.price);
       } else {
         return;
@@ -86,7 +86,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response && response.data) {
+      if (response && response.data.remaining_amount) {
         setRemaining(response.data.remaining_amount);
       } else {
         return;
@@ -126,7 +126,7 @@ const CustomerHomeScreen = ({navigation}: CustomerHomeScreenProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      if (response && response.data) {
+      if (response && response.data.announcements) {
         setAnnouncements(response.data.announcements);
       } else {
         return;

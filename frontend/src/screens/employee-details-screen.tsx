@@ -92,13 +92,14 @@ const EmployeeDetailsScreen = ({
           },
         },
       );
-      if (response && response.data) {
+      if (response && response.data.expenses) {
         const expenses = response.data.expenses;
         // Split expenses into chunks of 4 objects each
         const chunkedExpenses = chunkArray(expenses, 4);
         setExpenses(chunkedExpenses);
       } else {
         setExpenses([[{amount: 'No expenses found'}]]);
+        return;
       }
     } catch (error: any) {
       setExpenses([[{amount: 'No expenses found'}]]);
@@ -119,7 +120,7 @@ const EmployeeDetailsScreen = ({
         },
       );
 
-      if ((await response).data) {
+      if (response && (await response).data.data.assigned_alerts) {
         const chunkedAlerts = chunkArray(
           await (
             await response

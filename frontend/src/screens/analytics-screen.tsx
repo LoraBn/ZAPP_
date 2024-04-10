@@ -128,7 +128,6 @@ const AnalyticsScreen = () => {
   
     const colorPattern = ['pink', 'orange', "purple" ];
   
-    // Iterate over each schedule item
     let totalTimeSpent = 0;
     scheduleData.schedule.forEach((schedule) => {
       schedule.schedule.forEach((scheduleItem,index) => {
@@ -141,13 +140,11 @@ const AnalyticsScreen = () => {
   
         const percentage = (timeDifference / totalHoursInDay) * 100;
   
-        // Assign color based on the pattern
         const color = colorPattern[index % colorPattern.length];
-  
-        // Push the data for the current schedule item to the data array
+
         data.push({
           value: percentage,
-          label: `Schedule ${index + 1}`, // Adjust index for 1-based indexing
+          label: `Schedule ${index + 1}`,
           color: color,
         });
       });

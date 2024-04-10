@@ -48,7 +48,7 @@ const BillingHistory = () => {
         },
       });
 
-      if (responce && responce.data) {
+      if (responce && responce.data.bills) {
         setBills(responce.data.bills);
         calculateBillsAverage(responce.data.bills);
       } else {

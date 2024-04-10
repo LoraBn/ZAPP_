@@ -66,7 +66,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce && responce.data) {
+      if (responce && responce.data.plans) {
         setPlans(responce.data.plans.reverse());
       } else {
         return;
@@ -86,7 +86,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`, // Replace with your actual token
         },
       });
-      if (response && response.data) {
+      if (response && response.data.equipments) {
         setEquipments(response.data.equipments.reverse());
       } else {
         return;
@@ -105,7 +105,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce && responce.data) {
+      if (responce && responce.data.expenses) {
         setExpenses(responce.data.expenses.reverse());
       } else {
         return;
@@ -126,7 +126,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
         },
       });
 
-      if (responce && responce.data) {
+      if (responce && responce.data.bills) {
         setBills(responce.data.bills);
       } else {
         return;
@@ -160,7 +160,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response && response.data) {
+      if (response && response.data.price) {
         setKwhPrice(`${response.data.price.kwh_price}`);
       } else {
         return;
@@ -179,7 +179,7 @@ const BillsNavPage = ({navigation}: BillsNavPageProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (responce && responce.data) {
+      if (responce && responce.data.profit) {
         setProfit(parseInt(responce.data.profit));
       } else {
         return;

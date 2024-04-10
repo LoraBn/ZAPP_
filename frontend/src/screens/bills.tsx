@@ -50,7 +50,7 @@ const Expenses = ({}) => {
         },
       });
 
-      if (responce && responce.data) {
+      if (responce && responce.data.bills) {
         const formated = formatBillsSections(responce.data.bills);
         setBills(formated);
       } else {

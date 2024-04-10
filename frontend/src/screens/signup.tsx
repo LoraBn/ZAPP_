@@ -25,30 +25,6 @@ type SignUpProps = StackScreenProps<AuthStackParams, 'Signup'>;
 const SignUp = ({ navigation }: SignUpProps) => {
   const { setAccessToken, setExpiresAtToken, setType } = useUser(state => state);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        const userType = await AsyncStorage.getItem('userType');
-        if (token && userType) {
-          const response = await client.get('/auth', {
-            headers: {
-              authorization: `Bearer ${token}`,
-              type: userType,
-            },
-          });
-          if (response.data.success) {
-            setType(userType);
-            setAccessToken(token);
-          }
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    fetchData();
-  }, []);
-
   const [loading, setLoading] = useState<boolean>(false);
 
   const { control, handleSubmit } = useForm<SignUpForm>({

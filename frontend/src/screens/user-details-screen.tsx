@@ -90,8 +90,6 @@ const UserDetailsScreen = ({
   const [refresh, setRefresh] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchPreviousMeter();
-    fetchAllBills();
     establishWebSocketConnection();
   }, []);
 
@@ -110,16 +108,18 @@ const UserDetailsScreen = ({
           },
         },
       );
-      if (response.data) {
+      if (response && response.data) {
         console.log('Success', response.data.previousMeter);
         setPreviousMeter(response.data.previousMeter);
         setValue('previousMeter', response.data.previousMeter);
       } else {
         setPreviousMeter(0);
-        setValue('previousMeter', 'Not Found'); // No previous meter available
+        setValue('previousMeter', 'Not Found');
+        return 
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
@@ -152,13 +152,16 @@ const UserDetailsScreen = ({
         },
       });
 
-      if (responce) {
+      if (responce && responce.data.bills) {
         setBills(responce.data.bills);
         const chunckedBills = chunkArray(responce.data.bills, 4);
         setChunkedBills(chunckedBills);
+      } else{
+        return;
       }
     } catch (error) {
       console.log(error);
+      return;
     }
   };
 
