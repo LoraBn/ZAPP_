@@ -169,6 +169,10 @@ const EmployeeDetailsScreen = ({
       socket.on('employeeUpdate', data => {
         setRefresh(prev => !prev);
       });
+
+      socket.on('assignEvent', (data) => {
+        setRefresh(prev => !prev);
+      });
     }
   };
 

@@ -40,7 +40,7 @@ const GeneratorOnOff = () => {
           },
         },
       );
-      if (responce) {
+      if (responce && responce.data) {
         setValue('kw_price', price);
       }
 

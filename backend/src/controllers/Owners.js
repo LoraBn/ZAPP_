@@ -721,29 +721,6 @@ const createAnnouncement = async (req, res) => {
   }
 };
 
-const deleteAnnouncement = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const announcementId = req.params.id;
-
-    const queryText =
-      "DELETE FROM announcements WHERE announcement_id = $1 AND owner_id = $2";
-
-    const result = await pool.query(queryText, [announcementId, ownerId]);
-
-    if (result.rowCount > 0) {
-      res.status(202).json({ message: "Announcement deleted successfully" });
-    } else {
-      res
-        .status(404)
-        .json({ error_message: "No announcement found with the provided ID" });
-    }
-  } catch (error) {
-    console.error("Error deleting announcement:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const getKwhPrice = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -812,34 +789,6 @@ const updatePrice = async (req, res) => {
     res.status(200).json({ message: "Price updated successfully!" });
   } catch (error) {
     console.error("Error updating price:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deletePrice = async (req, res) => {
-  try {
-    const priceId = req.params.id;
-    const ownerId = req.user.userId;
-
-    // Delete the price
-    const deleteQuery = {
-      text: "DELETE FROM kwh_prices WHERE price_id = $1 AND owner_id = $2",
-      values: [priceId, ownerId],
-    };
-
-    const deleteResult = await pool.query(deleteQuery);
-
-    if (deleteResult.rowCount > 0) {
-      let room = `all${ownerId}`;
-      req.app.get("io").to(room).emit("deletePrice", { price_id: priceId });
-      res.status(202).json({ message: "Price deleted successfully" });
-    } else {
-      res
-        .status(404)
-        .json({ error_message: "No price found with the provided ID" });
-    }
-  } catch (error) {
-    console.error("Error deleting price:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -1001,35 +950,6 @@ const getElectricSchedule = async (req, res) => {
   }
 };
 
-const createElectricSchedule = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const { schedule } = req.body;
-
-    // Proceed with creating electric schedule
-    const queryText = `
-      INSERT INTO electric_schedules(owner_id, schedule)
-      VALUES($1, $2)
-      RETURNING schedule_id`;
-
-    const result = await pool.query(queryText, [ownerId, schedule]);
-
-    if (result.rows.length > 0) {
-      res.status(201).json({
-        schedule_id: result.rows[0].schedule_id,
-        message: "Electric schedule created successfully!",
-      });
-    } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to create electric schedule" });
-    }
-  } catch (error) {
-    console.error("Error creating electric schedule:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const updateElectricSchedule = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -1087,48 +1007,6 @@ const updateElectricSchedule = async (req, res) => {
     }
   } catch (error) {
     console.error("Error updating electric schedule:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deleteElectricSchedule = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const scheduleId = req.params.id;
-
-    // Check if the electric schedule exists and is owned by the provided owner
-    const scheduleExistsQuery =
-      "SELECT * FROM electric_schedules WHERE schedule_id = $1 AND owner_id = $2";
-    const scheduleExistsResult = await pool.query(scheduleExistsQuery, [
-      scheduleId,
-      ownerId,
-    ]);
-
-    if (scheduleExistsResult.rows.length === 0) {
-      return res.status(404).json({
-        error_message: "No electric schedule found with the provided ID",
-      });
-    }
-
-    // Delete the electric schedule
-    const deleteQuery = {
-      text: "DELETE FROM electric_schedules WHERE schedule_id = $1 AND owner_id = $2",
-      values: [scheduleId, ownerId],
-    };
-
-    const deleteResult = await pool.query(deleteQuery);
-
-    if (deleteResult.rowCount > 0) {
-      res
-        .status(200)
-        .json({ message: "Electric schedule deleted successfully!" });
-    } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to delete electric schedule" });
-    }
-  } catch (error) {
-    console.error("Error deleting electric schedule:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -1471,131 +1349,6 @@ const calculateProfit = async (req, res) => {
   }
 };
 
-
-const updateBill = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const billId = req.params.id;
-    const {
-      customerUsername,
-      previous_meter,
-      current_meter,
-      total_kwh,
-      total_amount,
-      billing_status,
-      remaining_amount,
-    } = req.body;
-
-    // Get the customer ID associated with the provided username and owner ID
-    const customerId = await getCustomerIdForOwner(ownerId, customerUsername);
-
-    if (!customerId) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the customer" });
-    }
-
-    // Check if the bill exists and is owned by the provided owner
-    const billExistsQuery =
-      "SELECT * FROM bills WHERE bill_id = $1 AND owner_id = $2";
-    const billExistsResult = await pool.query(billExistsQuery, [
-      billId,
-      ownerId,
-    ]);
-
-    if (billExistsResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No bill found with the provided ID" });
-    }
-
-    const existingBill = billExistsResult.rows[0];
-
-    // Determine the values to update
-    const updatedValues = {
-      customer_id: customerId || existingBill.customer_id,
-      previous_meter: previous_meter || existingBill.previous_meter,
-      current_meter: current_meter || existingBill.current_meter,
-      total_kwh: total_kwh || existingBill.total_kwh,
-      total_amount: total_amount || existingBill.total_amount,
-      billing_status: billing_status || existingBill.billing_status,
-      remaining_amount: remaining_amount || existingBill.remaining_amount,
-    };
-
-    // Update the bill
-    const updateQuery = {
-      text: `
-        UPDATE bills
-        SET customer_id = $1, previous_meter = $2, current_meter = $3, total_kwh = $4, total_amount = $5, billing_status = $6, remaining_amount = $7
-        WHERE bill_id = $8 AND owner_id = $9
-        RETURNING bill_id`,
-      values: [
-        updatedValues.customer_id,
-        updatedValues.previous_meter,
-        updatedValues.current_meter,
-        updatedValues.total_kwh,
-        updatedValues.total_amount,
-        updatedValues.billing_status,
-        updatedValues.remaining_amount,
-        billId,
-        ownerId,
-      ],
-    };
-
-    const updateResult = await pool.query(updateQuery);
-
-    if (updateResult.rowCount > 0) {
-      res.status(200).json({
-        bill_id: updateResult.rows[0].bill_id,
-        message: "Bill updated successfully!",
-      });
-    } else {
-      res.status(500).json({ error_message: "Failed to update bill" });
-    }
-  } catch (error) {
-    console.error("Error updating bill:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deleteBill = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const billId = req.params.id;
-
-    // Check if the bill exists and is owned by the provided owner
-    const billExistsQuery =
-      "SELECT * FROM bills WHERE bill_id = $1 AND owner_id = $2";
-    const billExistsResult = await pool.query(billExistsQuery, [
-      billId,
-      ownerId,
-    ]);
-
-    if (billExistsResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No bill found with the provided ID" });
-    }
-
-    // Proceed with deleting the bill
-    const deleteQuery = {
-      text: "DELETE FROM bills WHERE bill_id = $1 AND owner_id = $2",
-      values: [billId, ownerId],
-    };
-
-    const deleteResult = await pool.query(deleteQuery);
-
-    if (deleteResult.rowCount > 0) {
-      res.status(202).json({ message: "Bill deleted successfully" });
-    } else {
-      res.status(500).json({ error_message: "Failed to delete bill" });
-    }
-  } catch (error) {
-    console.error("Error deleting bill:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const startBilling = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -1910,186 +1663,6 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-const createSupportTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const { customer_username, ticket_message, is_urgent } = req.body;
-
-    // Get the customer and employee IDs associated with the provided usernames and owner ID
-    const customerId = await getCustomerIdForOwner(ownerId, customer_username);
-
-    if (!customerId) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the customer" });
-    }
-
-    const queryText = `INSERT INTO support_tickets (owner_id, customer_id, ticket_message, is_urgent) 
-      VALUES($1, $2, $3, $4)`;
-
-    const result = await pool.query(queryText, [
-      ownerId,
-      customerId,
-      ticket_message,
-      is_urgent,
-    ]);
-
-    if (result.rows.length > 0) {
-      res.status(201).json({
-        ticket_id: result.rows[0].ticket_id,
-        message: "Support ticket created successfully!",
-      });
-    } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to create support ticket" });
-    }
-  } catch (error) {
-    console.error("Error creating support ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const updateSupportTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const ticketId = req.params.id;
-    const { customer_username, ticket_message, is_urgent, is_closed } =
-      req.body;
-
-    // Get the customer and employee IDs associated with the provided usernames and owner ID
-    const customerId = await getCustomerIdForOwner(ownerId, customer_username);
-
-    if (!customerId) {
-      return res
-        .status(401)
-        .json({ error_message: "Error finding the customer or employee" });
-    }
-
-    // Check if the support ticket exists and is owned by the provided owner
-    const ticketExistsQuery =
-      "SELECT * FROM support_tickets WHERE ticket_id = $1 AND owner_id = $2";
-    const ticketExistsResult = await pool.query(ticketExistsQuery, [
-      ticketId,
-      ownerId,
-    ]);
-
-    if (ticketExistsResult.rows.length === 0) {
-      return res.status(404).json({
-        error_message: "No support ticket found with the provided ID",
-      });
-    }
-
-    const existingTicket = ticketExistsResult.rows[0];
-
-    // Determine the values to update
-    const updatedValues = {
-      customer_id: customerId || existingTicket.customer_id,
-      ticket_message: ticket_message || existingTicket.ticket_message,
-      is_urgent: is_urgent || existingTicket.is_urgent,
-      is_closed: is_closed || existingTicket.is_closed,
-    };
-
-    // Update the support ticket
-    const updateQuery = {
-      text: `
-        UPDATE support_tickets
-        SET customer_id = $1, ticket_message = $2, is_urgent = $3, is_closed = $4
-        WHERE ticket_id = $5 AND owner_id = $6
-        RETURNING ticket_id`,
-      values: [
-        updatedValues.customer_id,
-        updatedValues.ticket_message,
-        updatedValues.is_urgent,
-        updatedValues.is_closed,
-        ticketId,
-        ownerId,
-      ],
-    };
-
-    const updateResult = await pool.query(updateQuery);
-
-    if (updateResult.rowCount > 0) {
-      res.status(200).json({
-        ticket_id: updateResult.rows[0].ticket_id,
-        message: "Support ticket updated successfully!",
-      });
-    } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to update support ticket" });
-    }
-  } catch (error) {
-    console.error("Error updating support ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deleteSupportTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const ticketId = req.params.id;
-
-    // Check if the support ticket exists and is owned by the provided owner
-    const ticketExistsQuery =
-      "SELECT * FROM support_tickets WHERE ticket_id = $1 AND owner_id = $2";
-    const ticketExistsResult = await pool.query(ticketExistsQuery, [
-      ticketId,
-      ownerId,
-    ]);
-
-    if (ticketExistsResult.rows.length === 0) {
-      return res.status(404).json({
-        error_message: "No support ticket found with the provided ID",
-      });
-    }
-
-    // Proceed with deleting the support ticket
-    const deleteQuery = {
-      text: "DELETE FROM support_tickets WHERE ticket_id = $1 AND owner_id = $2",
-      values: [ticketId, ownerId],
-    };
-
-    const deleteResult = await pool.query(deleteQuery);
-
-    if (deleteResult.rowCount > 0) {
-      res.status(202).json({ message: "Support ticket deleted successfully" });
-    } else {
-      res
-        .status(500)
-        .json({ error_message: "Failed to delete support ticket" });
-    }
-  } catch (error) {
-    console.error("Error deleting support ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getSupportTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const ticketId = req.params.id;
-
-    // Check if the support ticket exists and is owned by the provided owner
-    const ticketQuery =
-      "SELECT * FROM support_tickets WHERE ticket_id = $1 AND owner_id = $2";
-    const ticketResult = await pool.query(ticketQuery, [ticketId, ownerId]);
-
-    if (ticketResult.rows.length === 0) {
-      return res.status(404).json({
-        error_message: "No support ticket found with the provided ID",
-      });
-    }
-
-    const supportTicket = ticketResult.rows[0];
-
-    res.status(200).json({ support_ticket: supportTicket });
-  } catch (error) {
-    console.error("Error retrieving support ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const getAllSupportTickets = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2146,42 +1719,6 @@ const getAllSupportTickets = async (req, res) => {
   }
 };
 
-const getAllOpenTickets = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-
-    // Retrieve all open support tickets for the provided owner
-    const openTicketsQuery =
-      "SELECT * FROM support_tickets WHERE owner_id = $1 AND is_closed = false";
-    const openTicketsResult = await pool.query(openTicketsQuery, [ownerId]);
-
-    const openTicketsList = openTicketsResult.rows;
-
-    res.status(200).json({ open_tickets_list: openTicketsList });
-  } catch (error) {
-    console.error("Error retrieving all open support tickets:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAllClosedTickets = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-
-    // Retrieve all closed support tickets for the provided owner
-    const closedTicketsQuery =
-      "SELECT * FROM support_tickets WHERE owner_id = $1 AND is_closed = true";
-    const closedTicketsResult = await pool.query(closedTicketsQuery, [ownerId]);
-
-    const closedTicketsList = closedTicketsResult.rows;
-
-    res.status(200).json({ closed_tickets_list: closedTicketsList });
-  } catch (error) {
-    console.error("Error retrieving all closed support tickets:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const closeSupportTicket = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2223,32 +1760,6 @@ const closeSupportTicket = async (req, res) => {
     }
   } catch (error) {
     console.error("Error closing support ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAllTicketReplies = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const ticketId = req.params.id;
-
-    const repliesQuery = `
-      SELECT 
-        reply_id, ticket_id, owner_id, customer_id, reply_text, created_at, issentbyowner
-      FROM support_tickets_replies 
-      WHERE owner_id = $1 AND ticket_id = $2
-    `;
-
-    const repliesResult = await pool.query(repliesQuery, [ownerId, ticketId]);
-
-    const repliesList = repliesResult.rows.map((reply) => ({
-      ...reply,
-      user_type: reply.issentbyowner ? "owner" : "customer",
-    }));
-
-    res.status(200).json({ replies_list: repliesList });
-  } catch (error) {
-    console.error("Error retrieving all replies for the ticket:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -2366,101 +1877,6 @@ const createAlertTicket = async (req, res) => {
   }
 };
 
-const updateAlertTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const alertId = req.params.id;
-    const { alert_type, alert_message } = req.body;
-
-    // Check if the alert ticket exists and is owned by the provided owner
-    const alertExistsQuery =
-      "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
-    const alertExistsResult = await pool.query(alertExistsQuery, [
-      alertId,
-      ownerId,
-    ]);
-
-    if (alertExistsResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No alert ticket found with the provided ID" });
-    }
-
-    // Determine the values to update
-    const updatedValues = {
-      alert_type: alert_type || existingAlert.alert_type,
-      alert_message: alert_message || existingAlert.alert_message,
-    };
-
-    // Update the alert ticket
-    const updateQuery = {
-      text: `
-        UPDATE alerts
-        SET alert_type = $1, alert_message = $2
-        WHERE alert_id = $5 AND owner_id = $6
-        RETURNING alert_id`,
-      values: [
-        updatedValues.alert_type,
-        updatedValues.alert_message,
-        alertId,
-        ownerId,
-      ],
-    };
-
-    const updateResult = await pool.query(updateQuery);
-
-    if (updateResult.rowCount > 0) {
-      res.status(200).json({
-        alert_id: updateResult.rows[0].alert_id,
-        message: "Alert ticket updated successfully!",
-      });
-    } else {
-      res.status(500).json({ error_message: "Failed to update alert ticket" });
-    }
-  } catch (error) {
-    console.error("Error updating alert ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deleteAlertTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const alertId = req.params.id;
-
-    // Check if the alert ticket exists and is owned by the provided owner
-    const alertExistsQuery =
-      "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
-    const alertExistsResult = await pool.query(alertExistsQuery, [
-      alertId,
-      ownerId,
-    ]);
-
-    if (alertExistsResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No alert ticket found with the provided ID" });
-    }
-
-    // Proceed with deleting the alert ticket
-    const deleteQuery = {
-      text: "DELETE FROM alerts WHERE alert_id = $1 AND owner_id = $2",
-      values: [alertId, ownerId],
-    };
-
-    const deleteResult = await pool.query(deleteQuery);
-
-    if (deleteResult.rowCount > 0) {
-      res.status(202).json({ message: "Alert ticket deleted successfully" });
-    } else {
-      res.status(500).json({ error_message: "Failed to delete alert ticket" });
-    }
-  } catch (error) {
-    console.error("Error deleting alert ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const getAssignedTickets = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2478,88 +1894,6 @@ const getAssignedTickets = async (req, res) => {
     res.status(200).json({ assigned_alerts: rows });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAlertTicket = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const alertId = req.params.id;
-
-    // Fetch alert information including owner username and creator username
-    const alertQuery = `
-      SELECT a.alert_id, a.owner_id, o.username AS owner_username, a.alert_type, a.alert_message,
-             a.is_closed, a.created_at, 
-             CASE 
-               WHEN a.user_type = 'owner' THEN co.username
-               WHEN a.user_type = 'employee' THEN ce.username
-             END AS created_by,
-             EXISTS (SELECT 1 FROM assigned_alerts WHERE alert_id = a.alert_id) AS is_assigned
-      FROM alerts a
-      JOIN owners o ON a.owner_id = o.owner_id
-      LEFT JOIN employees e ON a.created_by = e.employee_id
-      LEFT JOIN owners co ON a.created_by = co.owner_id AND a.user_type = 'owner'
-      LEFT JOIN employees ce ON a.created_by = ce.employee_id AND a.user_type = 'employee'
-      WHERE a.alert_id = $1 AND a.owner_id = $2
-    `;
-    const alertResult = await pool.query(alertQuery, [alertId, ownerId]);
-
-    if (alertResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No alert ticket found with the provided ID" });
-    }
-
-    const alertTicket = alertResult.rows[0];
-
-    // Fetch assigned employees for the alert
-    const assignedEmployeesQuery = `
-      SELECT e.username
-      FROM assigned_alerts aa
-      JOIN employees e ON aa.employee_id = e.employee_id
-      WHERE aa.alert_id = $1
-    `;
-    const assignedEmployeesResult = await pool.query(assignedEmployeesQuery, [
-      alertId,
-    ]);
-    const assignedEmployees = assignedEmployeesResult.rows.map(
-      (row) => row.username
-    );
-
-    // Fetch replies for the alert from both employees and owners
-    const repliesQuery = `
-      SELECT ar.reply_text, 
-             CASE 
-               WHEN ar.isSentByOwner THEN o.username
-               ELSE e.username
-             END AS sender_username
-      FROM alert_replies ar
-      LEFT JOIN owners o ON ar.owner_id = o.owner_id
-      LEFT JOIN employees e ON ar.employee_id = e.employee_id
-      WHERE ar.alert_id = $1
-    `;
-    const repliesResult = await pool.query(repliesQuery, [alertId]);
-    const replies = repliesResult.rows;
-
-    // Combine alert ticket information, assigned employees, and replies into response
-    const response = {
-      alert_id: alertTicket.alert_id,
-      owner_id: alertTicket.owner_id,
-      owner_username: alertTicket.owner_username,
-      alert_type: alertTicket.alert_type,
-      alert_message: alertTicket.alert_message,
-      is_assigned: alertTicket.is_assigned,
-      assigned_employee_usernames: assignedEmployees,
-      is_closed: alertTicket.is_closed,
-      created_at: alertTicket.created_at,
-      created_by: alertTicket.created_by,
-      replies: replies.reverse(),
-    };
-
-    res.status(200).json({ alert_ticket: response });
-  } catch (error) {
-    console.error("Error retrieving alert ticket:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -2642,42 +1976,6 @@ const getAllAlertTickets = async (req, res) => {
   }
 };
 
-const getAllOpenAlerts = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-
-    // Retrieve all open alert tickets for the provided owner
-    const openAlertsQuery =
-      "SELECT * FROM alerts WHERE owner_id = $1 AND is_closed = false";
-    const openAlertsResult = await pool.query(openAlertsQuery, [ownerId]);
-
-    const openAlertsList = openAlertsResult.rows;
-
-    res.status(200).json({ open_alerts_list: openAlertsList });
-  } catch (error) {
-    console.error("Error retrieving all open alert tickets:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAllClosedAlerts = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-
-    // Retrieve all closed alert tickets for the provided owner
-    const closedAlertsQuery =
-      "SELECT * FROM alert_tickets WHERE owner_id = $1 AND is_closed = true";
-    const closedAlertsResult = await pool.query(closedAlertsQuery, [ownerId]);
-
-    const closedAlertsList = closedAlertsResult.rows;
-
-    res.status(200).json({ closed_alerts_list: closedAlertsList });
-  } catch (error) {
-    console.error("Error retrieving all closed alert tickets:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const closeAlertTicket = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -2727,32 +2025,6 @@ const closeAlertTicket = async (req, res) => {
     }
   } catch (error) {
     console.error("Error closing alert ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAllAlertReplies = async (req, res) => {
-  try {
-    const ownerId = req.user.userId;
-    const alertId = req.params.id;
-
-    const repliesQuery = `
-      SELECT 
-        reply_id, alert_id, owner_id, employee_id, reply_text, isSentByOwner
-      FROM alert_replies 
-      WHERE owner_id = $1 AND alert_id = $2
-    `;
-
-    const repliesResult = await pool.query(repliesQuery, [ownerId, alertId]);
-
-    const repliesList = repliesResult.rows.map((reply) => ({
-      ...reply,
-      user_type: reply.issentbyowner ? "owner" : "employee",
-    }));
-
-    res.status(200).json({ replies_list: repliesList });
-  } catch (error) {
-    console.error("Error retrieving all replies for the alert:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -2960,24 +2232,18 @@ module.exports = {
   deleteEquipment,
   getAnnouncements,
   createAnnouncement,
-  deleteAnnouncement,
   getKwhPrice,
   updatePrice,
-  deletePrice,
   getPlans,
   createPlan,
   updatePlan,
   deletePlan,
   getElectricSchedule,
-  createElectricSchedule,
   updateElectricSchedule,
-  deleteElectricSchedule,
   getAllBills,
   getCustomerBill,
   calculateProfit,
   createBill,
-  updateBill,
-  deleteBill,
   calculateBill,
   getPreviousMeter,
   startBilling,
@@ -2989,24 +2255,11 @@ module.exports = {
   updateExpense,
   deleteExpense,
   getAllSupportTickets,
-  getSupportTicket,
-  createSupportTicket,
-  updateSupportTicket,
-  deleteSupportTicket,
   closeSupportTicket,
-  getAllOpenTickets,
-  getAllClosedTickets,
   createAlertTicket,
-  updateAlertTicket,
-  deleteAlertTicket,
-  getAlertTicket,
   getAllAlertTickets,
   closeAlertTicket,
-  getAllOpenAlerts,
-  getAllClosedAlerts,
-  getAllTicketReplies,
   createReply,
-  getAllAlertReplies,
   createAlertReply,
   getBillsAnalytics,
   getAssignedTickets,

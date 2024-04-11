@@ -5,11 +5,9 @@ const {
   getElectricScheduleCus,
   getAnnouncementsCus,
   getAllCustomerBills,
-  getBillDetails,
   getAllOpenTicketsCus,
   createSupportTicketCus,
   closeSupportTicketCus,
-  getAllTicketRepliesCus,
   createReplyCus,
   getKwhPriceCus,
   fetchRemaining,
@@ -31,7 +29,6 @@ router.get("/announcements", authenticateCustomerToken, getAnnouncementsCus);
 
 //bills
 router.get("/bills", authenticateCustomerToken, getAllCustomerBills);
-router.get("/bills/:id", authenticateCustomerToken, getBillDetails);
 
 //Price
 router.get("/price", authenticateCustomerToken, getKwhPriceCus);
@@ -49,11 +46,6 @@ router.put(
 );
 
 //Support tickets replies
-router.get(
-  "/ticket/:id/reply",
-  authenticateCustomerToken,
-  getAllTicketRepliesCus
-);
 router.post("/ticket/:id/reply", authenticateCustomerToken, createReplyCus);
 
 module.exports = router;

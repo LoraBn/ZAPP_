@@ -109,7 +109,6 @@ const UserDetailsScreen = ({
         },
       );
       if (response && response.data) {
-        console.log('Success', response.data.previousMeter);
         setPreviousMeter(response.data.previousMeter);
         setValue('previousMeter', response.data.previousMeter);
       } else {

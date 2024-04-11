@@ -31,9 +31,7 @@ const updateProfile = async (req, res) => {
     );
 
     if (usernameExists.rows.length > 0) {
-      return res
-        .status(207)
-        .json({ error_message: "Username already exists" });
+      return res.status(207).json({ error_message: "Username already exists" });
     }
 
     const updatedUserName = username || existingEmployee.username;
@@ -73,7 +71,6 @@ const updateProfile = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getCustomerListEmployee = async (req, res) => {
   try {
@@ -121,7 +118,7 @@ const createCustomerAccountEmployee = async (req, res) => {
     );
     const planResult = await pool.query(
       "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
-      [planName,ownerId]
+      [planName, ownerId]
     );
 
     if (planResult.rows.length === 0) {
@@ -202,7 +199,7 @@ const updateCustomerAccountEmployee = async (req, res) => {
         ? (
             await pool.query(
               "SELECT * FROM plans_prices WHERE plan_name = $1 AND owner_id = $2",
-              [planName,ownerId]
+              [planName, ownerId]
             )
           ).rows[0].plan_id
         : existingCustomer.plan_id,
@@ -279,46 +276,6 @@ const getSalary = async (req, res) => {
     res.json({ salary: results.rows[0].salary });
   } catch (error) {
     console.error("Error deleting customer:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const deleteCustomerEmp = async (req, res) => {
-  try {
-    const ownerId = req.user.ownerId;
-    const customerUserName = req.params.username;
-
-    const checkCustomerQuery =
-      "SELECT * FROM customers WHERE owner_id = $1 AND username = $2";
-    const checkCustomerResult = await pool.query(checkCustomerQuery, [
-      ownerId,
-      customerUserName,
-    ]);
-
-    if (checkCustomerResult.rows.length > 0) {
-      const deleteCustomerQuery =
-        "DELETE FROM customers WHERE owner_id = $1 AND username = $2";
-      await pool.query(deleteCustomerQuery, [ownerId, customerUserName]);
-      res.status(202).json({ message: "User deleted successfully" });
-    } else {
-      res.status(404).json({ error_message: "User not found" });
-    }
-  } catch (error) {
-    console.error("Error deleting customer:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
-const getAllBillsEmp = async (req, res) => {
-  try {
-    const ownerId = req.user.ownerId;
-
-    const queryText = "SELECT * FROM bills WHERE owner_id = $1";
-    const result = await pool.query(queryText, [ownerId]);
-
-    res.status(200).json({ bills: result.rows });
-  } catch (error) {
-    console.error("Error fetching bills:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
@@ -827,31 +784,6 @@ const getAllOpenAlertTickets = async (req, res) => {
   }
 };
 
-const getAlertTicketEmp = async (req, res) => {
-  try {
-    const ownerId = req.user.ownerId;
-    const alertId = req.params.id;
-
-    // Check if the alert ticket exists and is owned by the provided owner
-    const alertQuery =
-      "SELECT * FROM alerts WHERE alert_id = $1 AND owner_id = $2";
-    const alertResult = await pool.query(alertQuery, [alertId, ownerId]);
-
-    if (alertResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error_message: "No alert ticket found with the provided ID" });
-    }
-
-    const alertTicket = alertResult.rows[0];
-
-    res.status(200).json({ alert_ticket: alertTicket });
-  } catch (error) {
-    console.error("Error retrieving alert ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const createAlertTicketEmp = async (req, res) => {
   try {
     const employeeId = req.user.userId;
@@ -1098,32 +1030,6 @@ const assignSelf = async (req, res) => {
   }
 };
 
-const getAllAlertRepliesEmp = async (req, res) => {
-  try {
-    const ownerId = req.user.ownerId;
-    const alertId = req.params.id;
-
-    const repliesQuery = `
-        SELECT 
-          reply_id, alert_id, owner_id, employee_id, reply_text, isSentByOwner
-        FROM alert_replies 
-        WHERE owner_id = $1 AND alert_id = $2
-      `;
-
-    const repliesResult = await pool.query(repliesQuery, [ownerId, alertId]);
-
-    const repliesList = repliesResult.rows.map((reply) => ({
-      ...reply,
-      user_type: reply.issentbyowner ? "owner" : "employee",
-    }));
-
-    res.status(200).json({ replies_list: repliesList });
-  } catch (error) {
-    console.error("Error retrieving all replies for the alert:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const getAnnouncementsEmp = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
@@ -1211,9 +1117,7 @@ module.exports = {
   getCustomerListEmployee,
   createCustomerAccountEmployee,
   updateCustomerAccountEmployee,
-  deleteCustomerEmp,
   getSalary,
-  getAllBillsEmp,
   getCustomerBillEmp,
   createBillEmp,
   updateBillEmp,
@@ -1224,11 +1128,9 @@ module.exports = {
   calculateBillEmp,
   getPreviousMeterEmp,
   getAllOpenAlertTickets,
-  getAlertTicketEmp,
   createAlertTicketEmp,
   createAlertReplyEmp,
   getAssignedTicketsEmp,
-  getAllAlertRepliesEmp,
   getAnnouncementsEmp,
   getElectricScheduleEmp,
   getKwhPriceEmp,

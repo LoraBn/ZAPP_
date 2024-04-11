@@ -59,8 +59,6 @@ const AddAnnouncements = ({navigation}: AddAnnouncementsProps) => {
               },
             });
   
-            console.log(response.data);
-  
             Alert.alert('Success', 'The announcement has been successfully added.');
   
             navigation.goBack();

@@ -67,7 +67,7 @@ const ExpenseEditableItem = ({item}: ExpenseEditableItemProps) => {
 
     // Validate if the entered amount is a valid integer
     if (isNaN(data.amount)) {
-      Alert.alert('Invalid Amount', 'Please enter a valid integer amount.');
+      Alert.alert('Invalid Amount', 'Please enter a valid amount.');
       return;
     }
 

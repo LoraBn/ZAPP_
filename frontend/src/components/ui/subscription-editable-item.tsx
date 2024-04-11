@@ -32,7 +32,6 @@ const SubscriptionEditableItem = ({item}: SubscriptionEditableItemProps) => {
 
   async function onSubmit(data: EquipmentForm) {
     //HERE
-    console.log(data);
     try {
       const responce = await client.put(`/${type}/plans/${encodeURIComponent(item.plan_id)}`,data, {
         headers: {

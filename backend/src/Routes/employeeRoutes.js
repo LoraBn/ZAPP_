@@ -5,14 +5,10 @@ const {
   getCustomerListEmployee,
   createCustomerAccountEmployee,
   updateCustomerAccountEmployee,
-  getAllBillsEmp,
   getCustomerBillEmp,
   createBillEmp,
   updateBillEmp,
-  deleteCustomerEmp,
-  getAlertTicketEmp,
   createAlertReplyEmp,
-  getAllAlertRepliesEmp,
   createAlertTicketEmp,
   getAnnouncementsEmp,
   getElectricScheduleEmp,
@@ -48,16 +44,10 @@ router.put(
   authenticateEmployeeToken,
   updateCustomerAccountEmployee
 );
-router.delete(
-  "/customers/:username",
-  authenticateEmployeeToken,
-  deleteCustomerEmp
-);
 
 router.get("/salary", authenticateEmployeeToken, getSalary);
 
 //bills
-router.get("/bills", authenticateEmployeeToken, getAllBillsEmp);
 router.get("/bills/:id", authenticateEmployeeToken, getCustomerBillEmp);
 router.post("/bills/:id", authenticateEmployeeToken, createBillEmp);
 router.put("/bills/:id", authenticateEmployeeToken, updateBillEmp);
@@ -86,7 +76,6 @@ router.get("/price", authenticateEmployeeToken, getKwhPriceEmp);
 
 //alerts
 router.get("/issues", authenticateEmployeeToken, getAllOpenAlertTickets);
-router.get("/issues/:id", authenticateEmployeeToken, getAlertTicketEmp);
 router.post("/issues", authenticateEmployeeToken, createAlertTicketEmp);
 router.put("/issues/:id/close", authenticateEmployeeToken, closeAlertTicketEmp);
 
@@ -104,11 +93,6 @@ router.post(
   "/issue/:id/reply/",
   authenticateEmployeeToken,
   createAlertReplyEmp
-);
-router.get(
-  "/issue/:id/reply/",
-  authenticateEmployeeToken,
-  getAllAlertRepliesEmp
 );
 
 //Announcements

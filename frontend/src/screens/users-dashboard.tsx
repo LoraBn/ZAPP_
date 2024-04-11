@@ -109,9 +109,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
         headers: {authorization: `Bearer ${accessToken}`},
       });
 
-      if (usersType === 'customers') {
-
-        
+      if (usersType === 'customers' && response.data.customers) {
         setCustomers(response.data.customers.filter(
           (customer: User) => {
             if(isBilling && filters.includes("Done")){
@@ -132,7 +130,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
             }
           },
         ));
-      } else if (usersType === 'employees') {
+      } else if (usersType === 'employees' && response.data.employees) {
         setEmployees(response.data.employees);
         setFilteredUsers(response.data.employees);
       }

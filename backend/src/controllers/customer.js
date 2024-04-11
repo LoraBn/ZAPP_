@@ -29,9 +29,7 @@ const updateProfileCustomer = async (req, res) => {
     );
 
     if (usernameExists.rows.length > 0) {
-      return res
-        .status(207)
-        .json({ error_message: "Username already exists" });
+      return res.status(207).json({ error_message: "Username already exists" });
     }
 
     const updatedUserName = username || existingCustomer.username;
@@ -71,7 +69,6 @@ const updateProfileCustomer = async (req, res) => {
     res.status(500).json({ error_message: "Internal Server Error" });
   }
 };
-
 
 const getElectricScheduleCus = async (req, res) => {
   try {
@@ -121,21 +118,6 @@ const getAllCustomerBills = async (req, res) => {
     const result = await pool.query(queryText, [ownerId, customerId]);
 
     res.status(200).json({ bills: result.rows });
-  } catch (error) {
-    console.error("Error fetching customer bill:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-const getBillDetails = async (req, res) => {
-  try {
-    const ownerId = req.user.ownerId;
-    const billId = req.params.id;
-
-    const queryText =
-      "SELECT * FROM bills WHERE owner_id = $1 AND bill_id = $2";
-    const result = await pool.query(queryText, [ownerId, billId]);
-
-    res.status(200).json({ bill: result.rows[0] });
   } catch (error) {
     console.error("Error fetching customer bill:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
@@ -328,35 +310,6 @@ const fetchRemaining = async (req, res) => {
   }
 };
 
-const getAllTicketRepliesCus = async (req, res) => {
-  try {
-    const customerId = req.user.userId;
-    const ticketId = req.params.id;
-
-    const repliesQuery = `
-        SELECT 
-          reply_id, ticket_id, owner_id, customer_id, reply_text, created_at, issentbyowner
-        FROM support_tickets_replies 
-        WHERE customer_id = $1 AND ticket_id = $2
-      `;
-
-    const repliesResult = await pool.query(repliesQuery, [
-      customerId,
-      ticketId,
-    ]);
-
-    const repliesList = repliesResult.rows.map((reply) => ({
-      ...reply,
-      user_type: reply.issentbyowner ? "owner" : "customer",
-    }));
-
-    res.status(200).json({ replies_list: repliesList });
-  } catch (error) {
-    console.error("Error retrieving all replies for the ticket:", error);
-    res.status(500).json({ error_message: "Internal Server Error" });
-  }
-};
-
 const createReplyCus = async (req, res) => {
   try {
     const ownerId = req.user.ownerId;
@@ -424,11 +377,9 @@ module.exports = {
   getElectricScheduleCus,
   getAnnouncementsCus,
   getAllCustomerBills,
-  getBillDetails,
   getAllOpenTicketsCus,
   createSupportTicketCus,
   closeSupportTicketCus,
-  getAllTicketRepliesCus,
   createReplyCus,
   getKwhPriceCus,
   fetchRemaining,

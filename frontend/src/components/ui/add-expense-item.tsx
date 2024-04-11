@@ -36,7 +36,6 @@ const AddExpenseItem = ({onSuccess}: AddExpenseItemProps) => {
   async function onSubmit(data: AddSubscriptionForm) {
     // HERE
     console.log(data);
-    // SUCCESS IF U DONT USE REACT QUERY/RTK
     if (onSuccess) {
       onSuccess();
       try {
