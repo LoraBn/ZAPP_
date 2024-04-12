@@ -504,7 +504,7 @@ const createEquipment = async (req, res) => {
 
   // Passed validation
   const queryText = `INSERT INTO equipments (owner_id, name, price, description, status)
-    VALUES($1, $2, $3, $4, $5)`;
+    VALUES($1, $2, $3, $4, $5) RETURNING *`;
 
   pool.query(
     queryText,
@@ -515,12 +515,7 @@ const createEquipment = async (req, res) => {
         res.status(500).json({ error_message: "Internal Server Error" });
       } else {
         let room = `all${owner_id}`;
-        req.app.get("io").to(room).emit("newEquipment", {
-          name,
-          price,
-          description,
-          status,
-        });
+        req.app.get("io").to(room).emit("newEquipment", results.rows[0]);
         console.log("equipment sent to room", room);
         res.status(201).json({ message: "Equipment added successfully!" });
       }

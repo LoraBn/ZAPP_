@@ -46,6 +46,7 @@ const {
   calculateProfit,
   getBillsAnalytics,
   getAssignedTickets,
+  getPlans,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
