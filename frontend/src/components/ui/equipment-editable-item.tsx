@@ -32,16 +32,15 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
   });
   const {setSocket, socket, accessToken, type} = useUser(state => state);
 
-  
   const [isEditing, setIsEditing] = useState(false);
-  
+
   if (isEditing) {
     setValue('description', item.description);
     setValue('name', item.name);
     setValue('price', item.price.toString());
     setValue('status', item.status);
   }
-  
+
   async function onSubmit(data: EquipmentForm) {
     //HERE
     //SUCCESS
@@ -92,9 +91,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             style={styles.textInputStyles}
           />
         ) : (
-          item.equipment_id && (
-            <Text style={[styles.text, styles.semiBold]}>{item.name}</Text>
-          )
+          <Text style={[styles.text, styles.semiBold]}>{item.name}</Text>
         )}
         {isEditing ? (
           <TextInput
@@ -107,7 +104,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             keyboardType="number-pad"
           />
         ) : (
-          item.equipment_id && <Text style={styles.text}>{item.price}</Text>
+          <Text style={styles.text}>{item.price}</Text>
         )}
         {isEditing ? (
           <DropdownInput
@@ -121,7 +118,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
             textSize={14}
           />
         ) : (
-          item.equipment_id && <Text style={styles.text}>{item.status}</Text>
+          <Text style={styles.text}>{item.status}</Text>
         )}
       </View>
       {isEditing ? (
@@ -134,17 +131,15 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
           textColor={Colors.Black}
         />
       ) : (
-        item.equipment_id && <Text style={styles.text}>{item.description}</Text>
+        <Text style={styles.text}>{item.description}</Text>
       )}
       <View style={styles.bottomItemsContainer}>
         {!isEditing ? (
-          item.equipment_id && (
-            <Pressable onPress={() => setIsEditing(true)} style={styles.top}>
-              <Image
-                source={{uri: ImageStrings.EditIcon, height: 44, width: 21}}
-              />
-            </Pressable>
-          )
+          <Pressable onPress={() => setIsEditing(true)} style={styles.top}>
+            <Image
+              source={{uri: ImageStrings.EditIcon, height: 44, width: 21}}
+            />
+          </Pressable>
         ) : (
           <Pressable onPress={handleSubmit(onSubmit)} style={styles.smallTop}>
             <Image
@@ -153,7 +148,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
           </Pressable>
         )}
 
-        {item.equipment_id && (
+        {
           <Pressable
             onPress={() =>
               Alert.alert(
@@ -175,7 +170,7 @@ const EquipmentEditableItem = ({item}: EquipmentEditableItemProps) => {
               source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
             />
           </Pressable>
-        )}
+        }
       </View>
     </View>
   );
