@@ -72,20 +72,20 @@ const deleteAllUsers = async (req, res) => {
   try {
     const ownerId = req.user.userId;
 
-    const queryText = `DELETE FROM customers WHERE owner_id = $1;
-                       DELETE FROM employees WHERE owner_id = $1`;
-    const results = await pool.query(queryText, [ownerId]);
+    console.log("DELETING ALL USERS FOR ", ownerId)
 
-    if (results.rowCount > 0) {
-      let room = `all${ownerId}`;
-      req.app.get("io").to(room).emit("employeeUpdate", ownerId);
-      req.app.get("io").to(room).emit("customersUpdate", ownerId);
-      res
-        .status(200)
-        .json({ success: true, message: "Users deleted successfully" });
-    } else {
-      res.status(404).json({ message: "No users found for deletion" });
-    }
+    const queryTextCust = `DELETE FROM customers WHERE owner_id = $1`;
+    const queryTextEmp = `DELETE FROM employees WHERE owner_id = $1`;
+    const resultsCus = await pool.query(queryTextCust, [ownerId]);
+    const resultsEMp = await pool.query(queryTextEmp, [ownerId]);
+
+    let room = `all${ownerId}`;
+    req.app.get("io").to(room).emit("employeeUpdate", ownerId);
+    req.app.get("io").to(room).emit("customersUpdate", ownerId);
+    res
+      .status(200)
+      .json({ success: true, message: "Users deleted successfully" });
+
   } catch (error) {
     console.log(error);
     res.status(500).json({ error_message: "Internal server error" });
