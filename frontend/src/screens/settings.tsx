@@ -15,7 +15,7 @@ type SettingsForm = {
 };
 
 const Settings = () => {
-  const {type, signOut, accessToken,setAccessToken} = useUser(state => state);
+  const {type, signOut, accessToken, setAccessToken} = useUser(state => state);
 
   const {control, handleSubmit} = useForm<SettingsForm>({
     defaultValues: {password: '', username: ''},
@@ -32,9 +32,9 @@ const Settings = () => {
             try {
               const response = await client.put(`${type}/profile`, data, {
                 headers: {
-                  authorization: `Bearer ${accessToken}`
-                }
-              })
+                  authorization: `Bearer ${accessToken}`,
+                },
+              });
               if (response.status === 207) {
                 Alert.alert('Failed', response.data.error_message);
                 return;
@@ -51,22 +51,59 @@ const Settings = () => {
               console.log(error);
               return;
             }
-          }
+          },
         },
         {
           text: 'Cancel',
           onPress: () => console.log('Cancel Pressed'),
-          style: 'cancel'
-        }
+          style: 'cancel',
+        },
       ],
-      { cancelable: false }
+      {cancelable: false},
     );
   }
 
+  async function deleteAccount() {
+    try {
+      const response = client.delete(`/${type}/profile`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if ((await response).data.success) {
+        signingOut();
+      }
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+
   async function signingOut() {
-    await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('userType');
-    signOut();
+    try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('userType');
+      signOut();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function deleteAllUsers() {
+    try {
+      const responce = await client.delete(`/${type}/users`, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (responce && responce.data.success) {
+        Alert.alert('Users deleted');
+      } else {
+        Alert.alert('Failed deleting users');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
@@ -108,13 +145,19 @@ const Settings = () => {
           <ElevatedCard
             style={styles.dangerZoneStyle}
             innerContainerStyle={styles.dangerZoneElevatedButtonContainer}
-            textStyle={styles.elevatedButtonText}>
+            textStyle={styles.elevatedButtonText}
+            onPress={() => {
+              deleteAccount();
+            }}>
             Delete Account
           </ElevatedCard>
           <ElevatedCard
             style={styles.dangerZoneStyle}
             innerContainerStyle={styles.dangerZoneElevatedButtonContainer}
-            textStyle={styles.elevatedButtonText}>
+            textStyle={styles.elevatedButtonText}
+            onPress={() => {
+              deleteAllUsers;
+            }}>
             Delete all users
           </ElevatedCard>
         </>

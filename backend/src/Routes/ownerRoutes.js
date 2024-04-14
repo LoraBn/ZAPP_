@@ -48,6 +48,7 @@ const {
   getAssignedTickets,
   getPlans,
   deleteProfileAccount,
+  deleteAllUsers,
 } = require("../controllers/Owners");
 const { authenticateOwnerToken } = require("../middleware/ownerAuth");
 const router = Router();
@@ -57,6 +58,7 @@ router.post("/signup", ownerSignUp);
 router.put("/profile", authenticateOwnerToken, ownerUpdate);
 router.delete('/profile', authenticateOwnerToken, deleteProfileAccount)
 
+router.delete('/users', authenticateOwnerToken, deleteAllUsers)
 //customers
 router.get("/customers", authenticateOwnerToken, getCustomersList);
 router.post("/customers", authenticateOwnerToken, createCustomerAccount);

@@ -2,6 +2,7 @@ const pool = require("../db");
 const { generateOwnerToken } = require("../utils/JWT");
 const bcrypt = require("bcrypt");
 const { getCustomerIdForOwner } = require("../utils/ownerUtils");
+const { all } = require("../server");
 
 const ownerSignUp = async (req, res) => {
   try {
@@ -62,6 +63,31 @@ const deleteProfileAccount = async (req, res) => {
 
     res.json({ succes: true });
   } catch (error) {
+    console.log(error);
+    res.status(500).json({ error_message: "Internal server error" });
+  }
+};
+
+const deleteAllUsers = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+
+    const queryText = `DELETE FROM customers WHERE owner_id = $1;
+                       DELETE FROM employees WHERE owner_id = $1`;
+    const results = await pool.query(queryText, [ownerId]);
+
+    if (results.rowCount > 0) {
+      let room = `all${ownerId}`;
+      req.app.get("io").to(room).emit("employeeUpdate", ownerId);
+      req.app.get("io").to(room).emit("customersUpdate", ownerId);
+      res
+        .status(200)
+        .json({ success: true, message: "Users deleted successfully" });
+    } else {
+      res.status(404).json({ message: "No users found for deletion" });
+    }
+  } catch (error) {
+    console.log(error);
     res.status(500).json({ error_message: "Internal server error" });
   }
 };
@@ -715,14 +741,11 @@ const createAnnouncement = async (req, res) => {
         break;
     }
 
-    req.app
-      .get("io")
-      .to(room)
-      .emit("newAnnouncement", {
-        owner_username: req.user.username,
-        announcement_title,
-        announcement_message,
-      });
+    req.app.get("io").to(room).emit("newAnnouncement", {
+      owner_username: req.user.username,
+      announcement_title,
+      announcement_message,
+    });
     console.log("annoncement sent to room", room);
     res.status(201).json({
       message: "Announcement created",
@@ -2290,4 +2313,5 @@ module.exports = {
   createAlertReply,
   getBillsAnalytics,
   getAssignedTickets,
+  deleteAllUsers,
 };
