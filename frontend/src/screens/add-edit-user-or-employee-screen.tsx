@@ -114,6 +114,27 @@ const AddEditUserOrEmployeeScreen = ({
     }
   }, [params, plans, equipments]);
 
+  async function onDelete() {
+    try {
+      let userId;
+      let type;
+      if (params.employee?.employee_id) {
+        userId = params.employee?.employee_id;
+        type = 'employees';
+      } else if (params.user?.customer_id) {
+        userId = params.user.customer_id;
+        type = 'customers';
+      }
+      const responce = await client.delete(`/owner/${type}/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } catch (error) {
+      Alert.alert('error Deleting account');
+    }
+  }
+
   function onSubmit({
     address,
     name,
@@ -127,7 +148,9 @@ const AddEditUserOrEmployeeScreen = ({
   }: AddUserOrEmployeeForm) {
     Alert.alert(
       'Confirm?',
-      `Do you confirm adding the user?\nUser Details:\nUsername: ${getValues('username')}\nPassword: ${getValues('password')}`,
+      `Do you confirm adding the user?\nUser Details:\nUsername: ${getValues(
+        'username',
+      )}\nPassword: ${getValues('password')}`,
       [
         {text: 'Cancel', onPress: () => navigation.goBack()},
         {
@@ -159,7 +182,7 @@ const AddEditUserOrEmployeeScreen = ({
               default:
                 break;
             }
-    
+
             if (params.user || params.employee) {
               console.log(type.toLocaleLowerCase());
               const responce = client
@@ -198,9 +221,8 @@ const AddEditUserOrEmployeeScreen = ({
             navigation.goBack();
           },
         },
-      ]
+      ],
     );
-    
   }
 
   return (
@@ -211,7 +233,7 @@ const AddEditUserOrEmployeeScreen = ({
         {paddingTop: insets.top + 15},
       ]}>
       <View style={styles.topItemsContainer}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={handleSubmit(onDelete)}>
           <Image
             source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
           />
