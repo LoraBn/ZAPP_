@@ -127,10 +127,15 @@ const AddEditUserOrEmployeeScreen = ({
       }
       const responce = await client.delete(`/owner/${type}/${userId}`, {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          authorization: `Bearer ${accessToken}`,
         },
       });
+
+      if(responce.success){
+        console.log('Deleted')
+      }
     } catch (error) {
+      console.log(error)
       Alert.alert('error Deleting account');
     }
   }
