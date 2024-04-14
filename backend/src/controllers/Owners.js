@@ -193,22 +193,22 @@ const createEmployeeAccount = async (req, res) => {
 const deleteEmployee = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const employeeUserName = req.params.id;
+    const employeeId = req.params.id;
 
     const checkEmployeeQuery =
-      "SELECT * FROM employees WHERE owner_id = $1 AND username = $2";
+      "SELECT * FROM employees WHERE owner_id = $1 AND employee_id = $2";
     const checkEmployeeResult = await pool.query(checkEmployeeQuery, [
       ownerId,
-      employeeUserName,
+      employeeId,
     ]);
 
     if (checkEmployeeResult.rows.length > 0) {
       const deleteEmployeeQuery =
-        "DELETE FROM employees WHERE owner_id = $1 AND username = $2";
-      await pool.query(deleteEmployeeQuery, [ownerId, employeeUserName]);
+        "DELETE FROM employees WHERE owner_id = $1 AND employee_id = $2";
+      await pool.query(deleteEmployeeQuery, [ownerId, employeeId]);
 
       let room = `emp${ownerId}`;
-      req.app.get("io").to(room).emit("employeeUpdate", { username });
+      req.app.get("io").to(room).emit("employeeUpdate", { employeeId });
       res.status(202).json({ message: "Employee deleted successfully" });
     } else {
       res.status(404).json({ error_message: "Employee not found" });
@@ -474,7 +474,7 @@ const deleteCustomer = async (req, res) => {
         "DELETE FROM customers WHERE owner_id = $1 AND customer_id = $2";
       await pool.query(deleteCustomerQuery, [ownerId, customerId]);
       let room = `all${ownerId}`;
-      req.app.get("io").to(room).emit("customersUpdate", { username });
+      req.app.get("io").to(room).emit("customersUpdate", { customerId });
       res.status(202).json({ message: "User deleted successfully" });
     } else {
       res.status(404).json({ error_message: "User not found" });
