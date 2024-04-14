@@ -131,7 +131,7 @@ const AddEditUserOrEmployeeScreen = ({
         },
       });
 
-      if(responce.success){
+      if(responce.data.success){
         console.log('Deleted')
       }
     } catch (error) {
