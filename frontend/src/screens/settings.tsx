@@ -71,6 +71,7 @@ const Settings = () => {
         },
       });
       if ((await response).data.success) {
+        signOut()
         signingOut();
       }
     } catch (error) {
@@ -91,7 +92,7 @@ const Settings = () => {
 
   async function deleteAllUsers() {
     try {
-      const responce = await client.delete(`/owner/users`, {
+      const responce = await client.delete(`/${type}/users`, {
         headers: {
           authorization: `Bearer ${accessToken}`,
         },
@@ -147,10 +148,24 @@ const Settings = () => {
             innerContainerStyle={styles.dangerZoneElevatedButtonContainer}
             textStyle={styles.elevatedButtonText}
             onPress={() => {
-              deleteAccount();
+              Alert.alert(
+                'Are You Sure?',
+                'This action will permanently delete your account. Are you sure you want to proceed?',
+                [
+                  {
+                    text: 'Yes',
+                    onPress: () => deleteAccount(),
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                ],
+              );
             }}>
             Delete Account
           </ElevatedCard>
+
           <ElevatedCard
             style={styles.dangerZoneStyle}
             innerContainerStyle={styles.dangerZoneElevatedButtonContainer}
