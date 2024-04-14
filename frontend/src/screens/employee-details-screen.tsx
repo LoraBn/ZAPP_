@@ -176,6 +176,22 @@ const EmployeeDetailsScreen = ({
     }
   };
 
+  async function deleteUser() {
+    try {
+      const response = client.delete(`/${type}/employees/${employee.employee_id}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if ((await response).data.message) {
+        Alert.alert('account Deleted');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   return (
     <View style={[styles.screen, {paddingTop: insets.top}]}>
       <View style={styles.topItemsContainer}>
@@ -187,7 +203,19 @@ const EmployeeDetailsScreen = ({
           }>
           <Image source={{uri: ImageStrings.EditIcon, height: 43, width: 43}} />
         </Pressable>
-        <Image source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}} />
+        <Pressable onPress={() => {
+            Alert.alert(
+              `Delete employee ${employee.username}`,
+              `Are you Sure?\nthis will delete all the employee records`,
+              [
+                {text: 'Yes', onPress: () => deleteUser()},
+                {text: 'Cancel', onPress: () => console.log('canceled')},
+              ],
+              {cancelable: true},
+            );
+          }}>
+          <Image source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}} />
+        </Pressable>
       </View>
       <ScrollView
         style={styles.screen}
