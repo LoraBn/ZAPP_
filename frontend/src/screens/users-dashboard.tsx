@@ -147,9 +147,10 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
           authorization: `Bearer ${accessToken}`,
         },
       });
-      if (response && response.data) {
-        setIsBilling(!!response.data.cycleId);
+      if (response && response.data.cycleId) {
+        setIsBilling(true);
       } else {
+        setIsBilling(false)
         return;
       }
     } catch (error) {
@@ -194,7 +195,7 @@ const UsersDashboard = ({navigation}: UsersDashboardProps) => {
   useEffect(() => {
     fetchBillingCycle();
     fetchUsers();
-  }, [refresh, usersType, filters]);
+  }, [refresh, usersType, filters,isBilling]);
 
   const establishWebSocketConnection = () => {
     if (!socket) {

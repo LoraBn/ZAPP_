@@ -233,12 +233,29 @@ const AddEditUserOrEmployeeScreen = ({
         {paddingTop: insets.top + 15},
       ]}>
       <View style={styles.topItemsContainer}>
-        <Pressable onPress={handleSubmit(onDelete)}>
-          <Image
-            source={{uri: ImageStrings.TrashIcon, height: 21, width: 21}}
-          />
-        </Pressable>
-        <Pressable onPress={handleSubmit(onSubmit)}>
+      <Pressable onPress={() => {
+              Alert.alert(
+                "Are you sure?",
+                "Deleting the account will delete all records related to this account",
+                [
+                  {
+                    text: 'Delete',
+                    onPress: () => handleSubmit(onDelete)
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            }}>
+              <Image
+                source={{ uri: ImageStrings.TrashIcon }}
+                style={{ height: 21, width: 21 }}
+              />
+            </Pressable>
+
+          <Pressable onPress={handleSubmit(onSubmit)}>
           <Image source={{uri: ImageStrings.SaveIcon, height: 21, width: 21}} />
         </Pressable>
       </View>
