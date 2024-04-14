@@ -193,7 +193,7 @@ const createEmployeeAccount = async (req, res) => {
 const deleteEmployee = async (req, res) => {
   try {
     const ownerId = req.user.userId;
-    const employeeUserName = req.params.username;
+    const employeeUserName = req.params.id;
 
     const checkEmployeeQuery =
       "SELECT * FROM employees WHERE owner_id = $1 AND username = $2";

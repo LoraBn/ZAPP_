@@ -75,7 +75,7 @@ router.put(
   authenticateOwnerToken,
   updateEmployeeAccount
 );
-router.delete("/employees/:username", authenticateOwnerToken, deleteEmployee);
+router.delete("/employees/:id", authenticateOwnerToken, deleteEmployee);
 
 //equipments
 router.get("/equipments", authenticateOwnerToken, getEquipments);
