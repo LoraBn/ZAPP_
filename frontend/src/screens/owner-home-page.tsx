@@ -110,7 +110,6 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   useEffect(() => {
     fetchAnnouncements();
     establishWebSocketConnection();
-    fetchEmployees();
     fetchIssues();
     fetchTickets();
     return () => {
@@ -123,6 +122,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
   const [refresh, setRefresh] = useState<boolean>(false);
 
   useEffect(() => {
+    fetchEmployees();
     fetchProfit();
     fetchPrice();
     fetchPlans();
