@@ -10,7 +10,7 @@ const ownerSignUp = async (req, res) => {
     // Check if the username is already registered
     const userNameExists = await pool.query(
       "SELECT * FROM owners WHERE username = $1",
-      [userName]
+      [username]
     );
 
     if (userNameExists.rows.length > 0) {
@@ -28,7 +28,7 @@ const ownerSignUp = async (req, res) => {
     const result = await pool.query(insertQuery, [
       name,
       lastName,
-      userName,
+      username,
       hashedPass,
     ]);
 
