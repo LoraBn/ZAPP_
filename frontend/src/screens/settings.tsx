@@ -91,7 +91,7 @@ const Settings = () => {
 
   async function deleteAllUsers() {
     try {
-      const responce = await client.delete(`/${type}/users`, {
+      const responce = await client.delete(`/owner/users`, {
         headers: {
           authorization: `Bearer ${accessToken}`,
         },
@@ -156,7 +156,20 @@ const Settings = () => {
             innerContainerStyle={styles.dangerZoneElevatedButtonContainer}
             textStyle={styles.elevatedButtonText}
             onPress={() => {
-              deleteAllUsers;
+              Alert.alert(
+                'Are You Sure?',
+                'This action will delete all users. Are you sure you want to proceed?',
+                [
+                  {
+                    text: 'Yes',
+                    onPress: () => deleteAllUsers(),
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                ],
+              );
             }}>
             Delete all users
           </ElevatedCard>
