@@ -1046,7 +1046,7 @@ const getAnnouncementsEmp = async (req, res) => {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
       res
-        .status(404)
+        .status(204)
         .json({ error_message: "No announcements found for the employee" });
     }
   } catch (error) {

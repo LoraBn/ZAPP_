@@ -88,7 +88,7 @@ const OwnerHomePage = ({navigation}: OwnerHomePageProps) => {
         return;
       }
     } catch (error) {
-      console.error('Error fetching announcements:', error);
+      console.error('Error fetching Equipments:', error);
       return;
     }
   };

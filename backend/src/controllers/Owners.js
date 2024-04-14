@@ -14,8 +14,7 @@ const ownerSignUp = async (req, res) => {
     );
 
     if (userNameExists.rows.length > 0) {
-      return res
-        .json({ error_message: "Username already registered" });
+      return res.json({ error_message: "Username already registered" });
     }
 
     const hashedPass = await bcrypt.hash(password, 10);
@@ -47,6 +46,23 @@ const ownerSignUp = async (req, res) => {
   } catch (error) {
     console.error("Error during owner sign-up:", error);
     res.status(500).json({ error_message: "Internal Server Error" });
+  }
+};
+
+const deleteProfileAccount = async (req, res) => {
+  try {
+    const ownerId = req.user.userId;
+    const queryText = `DELETE FROM owners  WHERE owner_id=$1;`;
+
+    const result = await pool.query(queryText, [ownerId]);
+
+    if (!result) {
+      res.json({ succes: false });
+    }
+
+    res.json({ succes: true });
+  } catch (error) {
+    res.status(500).json({ error_message: "Internal server error" });
   }
 };
 
@@ -344,7 +360,6 @@ const createCustomerAccount = async (req, res) => {
 
 const updateCustomerAccount = async (req, res) => {
   try {
-
     const ownerUserId = req.user.userId;
     const customerUsername = req.params.username;
     const {
@@ -661,7 +676,7 @@ const getAnnouncements = async (req, res) => {
       res.status(200).json({ announcements: announcementsResult.rows });
     } else {
       res
-        .status(404)
+        .status(204)
         .json({ error_message: "No announcements found for the owner" });
     }
   } catch (error) {
@@ -703,7 +718,11 @@ const createAnnouncement = async (req, res) => {
     req.app
       .get("io")
       .to(room)
-      .emit("newAnnouncement", { owner_username: req.user.username, announcement_title, announcement_message });
+      .emit("newAnnouncement", {
+        owner_username: req.user.username,
+        announcement_title,
+        announcement_message,
+      });
     console.log("annoncement sent to room", room);
     res.status(201).json({
       message: "Announcement created",
@@ -1293,10 +1312,14 @@ const calculateProfit = async (req, res) => {
       AND 
         owner_id = $3
     `;
-    const billsResult = await pool.query(billsQuery, [currentMonth, currentYear, ownerId]);
+    const billsResult = await pool.query(billsQuery, [
+      currentMonth,
+      currentYear,
+      ownerId,
+    ]);
     const totalBills = billsResult.rows[0].total_bills;
 
-    console.log(totalBills)
+    console.log(totalBills);
 
     // Fetch remaining amount of bills with 'PARTIAL' status in the current month
     const remainingAmountQuery = `
@@ -1313,10 +1336,14 @@ const calculateProfit = async (req, res) => {
       AND 
         owner_id = $3
     `;
-    const remainingAmountResult = await pool.query(remainingAmountQuery, [currentMonth, currentYear, ownerId]);
+    const remainingAmountResult = await pool.query(remainingAmountQuery, [
+      currentMonth,
+      currentYear,
+      ownerId,
+    ]);
     const remainingAmount = remainingAmountResult.rows[0].remaining_amount;
 
-    console.log(remainingAmount)
+    console.log(remainingAmount);
 
     // Fetch total amount of expenses in the current month on the same date
     const expensesQuery = `
@@ -1331,7 +1358,11 @@ const calculateProfit = async (req, res) => {
       AND 
         owner_id = $3
     `;
-    const expensesResult = await pool.query(expensesQuery, [currentMonth, currentYear, ownerId]);
+    const expensesResult = await pool.query(expensesQuery, [
+      currentMonth,
+      currentYear,
+      ownerId,
+    ]);
     const totalExpenses = expensesResult.rows[0].total_expenses || 0;
 
     // Calculate profit considering remaining amount of partial bills
@@ -2212,6 +2243,7 @@ const getBillsAnalytics = async (req, res) => {
 
 module.exports = {
   ownerSignUp,
+  deleteProfileAccount,
   getCustomersList,
   getEmployeeList,
   createCustomerAccount,
