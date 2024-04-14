@@ -34,7 +34,7 @@ const ownerSignUp = async (req, res) => {
 
     const userId = result.rows[0].owner_id;
 
-    const token = await generateOwnerToken(userId, userName);
+    const token = await generateOwnerToken(userId, username);
 
     if (!token) {
       console.error("Error generating token");
